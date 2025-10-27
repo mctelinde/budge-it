@@ -37,12 +37,9 @@ A modern, responsive personal finance management application built with React an
 ### Installation
 
 1. Clone the repository
-
 2. Install dependencies
-
 3. Start the development server
-
-4. Open http://localhost:3000
+4. Open <http://localhost:3000>
 
 ## Tech Stack
 
@@ -54,6 +51,6 @@ A modern, responsive personal finance management application built with React an
 
 ## Author
 
-**Chris Telinde**
+Chris Telinde
 
 Built with React and Material-UI
