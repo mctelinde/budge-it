@@ -1,6 +1,16 @@
 import React from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Box, Chip, useTheme } from '@mui/material';
+import {
+  Box,
+  Chip,
+  useTheme,
+  Card,
+  CardContent,
+  Typography,
+  useMediaQuery,
+  Stack,
+  Divider,
+} from '@mui/material';
 import { Transaction } from '../data/mockData';
 
 interface TransactionTableProps {
@@ -13,6 +23,127 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   onEditTransaction
 }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [page, setPage] = React.useState(0);
+  const [pageSize, setPageSize] = React.useState(25);
+
+  // Mobile Card View Component
+  const MobileTransactionCard: React.FC<{ transaction: Transaction }> = ({ transaction }) => {
+    const date = new Date(transaction.date);
+    const formattedDate = date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    return (
+      <Card
+        onClick={() => onEditTransaction?.(transaction)}
+        sx={{
+          mb: 2,
+          cursor: onEditTransaction ? 'pointer' : 'default',
+          transition: 'all 0.2s ease',
+          background: theme.palette.mode === 'dark'
+            ? 'rgba(255, 255, 255, 0.05)'
+            : 'rgba(255, 255, 255, 0.9)',
+          '&:hover': {
+            transform: onEditTransaction ? 'translateY(-2px)' : 'none',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 4px 12px rgba(0, 0, 0, 0.4)'
+              : '0 4px 12px rgba(0, 0, 0, 0.15)',
+          },
+        }}
+      >
+        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+          <Stack spacing={1.5}>
+            {/* Header: Description and Amount */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, flex: 1, pr: 1 }}>
+                {transaction.description}
+              </Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 'bold',
+                  color: transaction.type === 'income' ? '#14959c' : '#ff6f00',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {transaction.type === 'income' ? '+' : '-'}${Math.abs(transaction.amount).toFixed(2)}
+              </Typography>
+            </Box>
+
+            {/* Type Chip */}
+            <Box>
+              <Chip
+                label={transaction.type}
+                size="small"
+                sx={{
+                  textTransform: 'capitalize',
+                  background: transaction.type === 'income'
+                    ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
+                    : 'linear-gradient(135deg, #d84315 0%, #ff6f00 100%)',
+                  color: '#ffffff',
+                  fontWeight: 600,
+                  border: 'none',
+                }}
+              />
+            </Box>
+
+            <Divider />
+
+            {/* Details Grid */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: 1.5,
+                fontSize: '0.875rem',
+              }}
+            >
+              <Box>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Date
+                </Typography>
+                <Typography variant="body2">{formattedDate}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Category
+                </Typography>
+                <Typography variant="body2">{transaction.category}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Account
+                </Typography>
+                <Typography variant="body2">{transaction.account}</Typography>
+              </Box>
+              {transaction.notes && (
+                <Box sx={{ gridColumn: '1 / -1' }}>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Notes
+                  </Typography>
+                  <Typography variant="body2">{transaction.notes}</Typography>
+                </Box>
+              )}
+            </Box>
+          </Stack>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Sort transactions by date (newest first)
+  const sortedTransactions = [...transactions].sort((a, b) =>
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  // Pagination for mobile
+  const paginatedTransactions = sortedTransactions.slice(
+    page * pageSize,
+    (page + 1) * pageSize
+  );
 
   const columns: GridColDef[] = [
     {
@@ -89,6 +220,36 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
     },
   ];
 
+  // Mobile view
+  if (isMobile) {
+    return (
+      <Box sx={{ width: '100%' }}>
+        {paginatedTransactions.map((transaction) => (
+          <MobileTransactionCard key={transaction.id} transaction={transaction} />
+        ))}
+
+        {/* Mobile Pagination */}
+        {sortedTransactions.length > pageSize && (
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 2,
+              mt: 3,
+              mb: 2,
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              {page * pageSize + 1}-{Math.min((page + 1) * pageSize, sortedTransactions.length)} of {sortedTransactions.length}
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  }
+
+  // Desktop view (existing table)
   return (
     <Box sx={{
       width: '100%',
