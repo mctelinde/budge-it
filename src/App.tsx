@@ -4,6 +4,7 @@ import { ThemeProvider, CssBaseline } from '@mui/material';
 import { Layout } from './components/Layout';
 import { GlobalStyles } from './components/GlobalStyles';
 import { lightTheme, darkTheme } from './themes/theme';
+import { LandingPage } from './pages/LandingPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { BillsPage } from './pages/BillsPage';
 import { BudgetPage } from './pages/BudgetPage';
@@ -23,17 +24,16 @@ function App() {
       <CssBaseline />
       <GlobalStyles />
       <BrowserRouter>
-        <Layout toggleTheme={toggleTheme}>
-          <Routes>
-            <Route path="/transactions" element={<TransactionsPage />} />
-            <Route path="/bills" element={<BillsPage />} />
-            <Route path="/budget" element={<BudgetPage />} />
-            <Route path="/spending" element={<SpendingPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/settings/categories" element={<CategoryManagementPage />} />
-            <Route path="/" element={<Navigate to="/transactions" replace />} />
-          </Routes>
-        </Layout>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/app/transactions" element={<Layout toggleTheme={toggleTheme}><TransactionsPage /></Layout>} />
+          <Route path="/app/bills" element={<Layout toggleTheme={toggleTheme}><BillsPage /></Layout>} />
+          <Route path="/app/budget" element={<Layout toggleTheme={toggleTheme}><BudgetPage /></Layout>} />
+          <Route path="/app/spending" element={<Layout toggleTheme={toggleTheme}><SpendingPage /></Layout>} />
+          <Route path="/app/settings" element={<Layout toggleTheme={toggleTheme}><SettingsPage /></Layout>} />
+          <Route path="/app/settings/categories" element={<Layout toggleTheme={toggleTheme}><CategoryManagementPage /></Layout>} />
+          <Route path="/app" element={<Navigate to="/app/transactions" replace />} />
+        </Routes>
       </BrowserRouter>
     </ThemeProvider>
   );

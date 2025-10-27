@@ -9,8 +9,8 @@ export const GlobalStyles = () => (
         padding: 0,
       },
       html: {
-        '-webkit-font-smoothing': 'antialiased',
-        '-moz-osx-font-smoothing': 'grayscale',
+        WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale',
         height: '100%',
         width: '100%',
       },
@@ -25,8 +25,8 @@ export const GlobalStyles = () => (
       // Improve text rendering on macOS
       '@media screen and (-webkit-min-device-pixel-ratio: 2), screen and (min-resolution: 2dppx)': {
         body: {
-          '-moz-osx-font-smoothing': 'grayscale',
-          '-webkit-font-smoothing': 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
+          WebkitFontSmoothing: 'antialiased',
         },
       },
     }}

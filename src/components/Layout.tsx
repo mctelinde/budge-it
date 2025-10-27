@@ -52,10 +52,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
   };
 
   const menuItems = [
-    { text: 'Transactions', icon: <Receipt />, path: '/transactions' },
-    { text: 'Bills', icon: <Description />, path: '/bills' },
-    { text: 'Budget', icon: <AccountBalance />, path: '/budget' },
-    { text: 'Spending', icon: <Assessment />, path: '/spending' },
+    { text: 'Transactions', icon: <Receipt />, path: '/app/transactions' },
+    { text: 'Bills', icon: <Description />, path: '/app/bills' },
+    { text: 'Budget', icon: <AccountBalance />, path: '/app/budget' },
+    { text: 'Spending', icon: <Assessment />, path: '/app/spending' },
   ];
 
   const currentPage = menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard';
@@ -129,7 +129,21 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
           </IconButton>
         )}
         {desktopOpen && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            component={Link}
+            to="/"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              textDecoration: 'none',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s ease',
+              '&:hover': {
+                opacity: 0.8,
+              },
+            }}
+          >
             <AccountBalanceWallet
               sx={{
                 fontSize: '2rem',
@@ -234,7 +248,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
       <Box sx={{ mt: 'auto', p: 1 }}>
         <ListItem
           component={Link}
-          to="/settings"
+          to="/app/settings"
           sx={{
             color: '#ffffff',
             textDecoration: 'none',

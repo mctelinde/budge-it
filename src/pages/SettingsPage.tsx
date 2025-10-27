@@ -23,25 +23,25 @@ export const SettingsPage: React.FC = () => {
       title: 'Manage Categories',
       description: 'Create, edit, and organize transaction categories',
       icon: <CategoryIcon />,
-      path: '/settings/categories',
+      path: '/app/settings/categories',
     },
     {
       title: 'Accounts',
       description: 'Manage your bank accounts and payment methods',
       icon: <AccountBalance />,
-      path: '/settings/accounts',
+      path: '/app/settings/accounts',
     },
     {
       title: 'Notifications',
       description: 'Configure alerts and reminders',
       icon: <Notifications />,
-      path: '/settings/notifications',
+      path: '/app/settings/notifications',
     },
     {
       title: 'Appearance',
       description: 'Customize the look and feel of the app',
       icon: <Palette />,
-      path: '/settings/appearance',
+      path: '/app/settings/appearance',
     },
   ];
 
