@@ -77,6 +77,10 @@ export const TransactionsPage: React.FC = () => {
     }
   };
 
+  const handleDeleteTransaction = (id: string) => {
+    setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type === 'text/csv') {
@@ -245,6 +249,7 @@ export const TransactionsPage: React.FC = () => {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSave={handleSaveTransaction}
+        onDelete={handleDeleteTransaction}
         transaction={editingTransaction}
         isEditing={!!editingTransaction}
       />

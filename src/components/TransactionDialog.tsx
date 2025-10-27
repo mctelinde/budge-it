@@ -10,6 +10,7 @@ import {
   Stack,
   InputAdornment,
   useTheme,
+  Box,
 } from '@mui/material';
 import { Transaction } from '../data/mockData';
 
@@ -17,6 +18,7 @@ interface TransactionDialogProps {
   open: boolean;
   onClose: () => void;
   onSave: (transaction: Partial<Transaction>) => void;
+  onDelete?: (id: string) => void;
   transaction?: Transaction;
   isEditing?: boolean;
 }
@@ -25,6 +27,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
   open,
   onClose,
   onSave,
+  onDelete,
   transaction,
   isEditing = false,
 }) => {
@@ -52,6 +55,13 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
     e.preventDefault();
     onSave(formData);
     onClose();
+  };
+
+  const handleDelete = () => {
+    if (transaction?.id && onDelete) {
+      onDelete(transaction.id);
+      onClose();
+    }
   };
 
   const categories = [
@@ -107,7 +117,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                 }}
               />
             </Stack>
-            
+
             <TextField
               fullWidth
               label="Description"
@@ -175,36 +185,56 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button 
-            onClick={onClose}
-            sx={{
-              color: theme.palette.text.primary,
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.08)' 
-                  : 'rgba(0, 0, 0, 0.04)',
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            variant="contained"
-            sx={{
-              background: theme.palette.mode === 'dark'
-                ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
-                : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
-              '&:hover': {
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: 'space-between' }}>
+          <Box>
+            {isEditing && onDelete && (
+              <Button
+                onClick={handleDelete}
+                variant="contained"
+                sx={{
+                  background: 'linear-gradient(135deg, #d84315 0%, #ff6f00 100%)',
+                  color: '#ffffff',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #bf360c 0%, #e65100 100%)',
+                  }
+                }}
+              >
+                Delete
+              </Button>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              onClick={onClose}
+              sx={{
+                color: theme.palette.text.primary,
+                '&:hover': {
+                  backgroundColor: theme.palette.mode === 'dark'
+                    ? 'rgba(255, 255, 255, 0.08)'
+                    : 'rgba(0, 0, 0, 0.04)',
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{
                 background: theme.palette.mode === 'dark'
-                  ? 'linear-gradient(135deg, #0a5c5f 0%, #107a80 100%)'
-                  : 'linear-gradient(135deg, #107a80 0%, #1aa3a9 100%)',
-              }
-            }}
-          >
-            {isEditing ? 'Save Changes' : 'Add Transaction'}
-          </Button>
+                  ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
+                  : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
+                color: '#ffffff',
+                '&:hover': {
+                  background: theme.palette.mode === 'dark'
+                    ? 'linear-gradient(135deg, #0a5c5f 0%, #107a80 100%)'
+                    : 'linear-gradient(135deg, #107a80 0%, #1aa3a9 100%)',
+                }
+              }}
+            >
+              {isEditing ? 'Save Changes' : 'Add Transaction'}
+            </Button>
+          </Box>
         </DialogActions>
       </form>
     </Dialog>

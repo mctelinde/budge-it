@@ -60,17 +60,48 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
 
   const currentPage = menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard';
 
+  const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = React.useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePos({
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    });
+  };
+
   const drawer = (
-    <Box sx={{
-      height: '100vh',
-      overflow: 'hidden',
-      background: theme.palette.mode === 'dark'
-        ? 'linear-gradient(180deg, #0d7377 0%, #14959c 100%)'
-        : 'linear-gradient(180deg, #14959c 0%, #1fb5bc 100%)',
-      borderRight: 'none',
-      display: 'flex',
-      flexDirection: 'column',
-    }}>
+    <Box
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+      sx={{
+        height: '100vh',
+        overflow: 'hidden',
+        position: 'relative',
+        background: theme.palette.mode === 'dark'
+          ? 'linear-gradient(180deg, #0d7377 0%, #14959c 100%)'
+          : 'linear-gradient(180deg, #14959c 0%, #1fb5bc 100%)',
+        borderRight: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: isHovering
+            ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.15) 0%, transparent 50%)`
+            : 'none',
+          pointerEvents: 'none',
+          transition: 'opacity 0.3s ease',
+          opacity: isHovering ? 1 : 0,
+        },
+      }}
+    >
       <Box sx={{
         height: 64,
         display: 'flex',
@@ -155,20 +186,43 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
               color: '#ffffff',
               textDecoration: 'none',
               mx: 1,
-              borderRadius: 1,
+              my: 0.5,
+              borderRadius: 2,
               justifyContent: desktopOpen ? 'flex-start' : 'center',
+              transition: 'all 0.2s ease-in-out',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.25) 100%)',
+                opacity: 0,
+                transition: 'opacity 0.2s ease-in-out',
+                borderRadius: 2,
+              },
+              '&:hover::before': {
+                opacity: 1,
+              },
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                transform: 'translateX(4px)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
               },
               '&.active': {
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
               },
               '& .MuiListItemIcon-root': {
                 color: '#ffffff',
                 minWidth: desktopOpen ? 40 : 0,
+                zIndex: 1,
               },
               '& .MuiListItemText-primary': {
                 color: '#ffffff',
+                zIndex: 1,
               },
             }}
           >
@@ -185,17 +239,39 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
             color: '#ffffff',
             textDecoration: 'none',
             mx: 1,
-            borderRadius: 1,
+            my: 0.5,
+            borderRadius: 2,
             justifyContent: desktopOpen ? 'flex-start' : 'center',
+            transition: 'all 0.2s ease-in-out',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.25) 100%)',
+              opacity: 0,
+              transition: 'opacity 0.2s ease-in-out',
+              borderRadius: 2,
+            },
+            '&:hover::before': {
+              opacity: 1,
+            },
             '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              transform: 'translateX(4px)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
             },
             '& .MuiListItemIcon-root': {
               color: '#ffffff',
               minWidth: desktopOpen ? 40 : 0,
+              zIndex: 1,
             },
             '& .MuiListItemText-primary': {
               color: '#ffffff',
+              zIndex: 1,
             },
           }}
         >
@@ -359,9 +435,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.leavingScreen,
           }),
-          backgroundColor: theme.palette.mode === 'dark'
-            ? 'rgba(0, 0, 0, 0.2)'
-            : 'rgba(255, 255, 255, 0.8)',
+          background: theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, rgba(18, 18, 18, 0.95) 0%, rgba(30, 30, 30, 0.95) 100%)'
+            : 'linear-gradient(135deg, rgba(240, 245, 250, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%)',
           minHeight: '100vh',
         }}
       >
