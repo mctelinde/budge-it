@@ -54,4 +54,6 @@ A modern, responsive personal finance management application built with React an
 
 ## Author
 
+**Chris Telinde**
+
 Built with React and Material-UI
