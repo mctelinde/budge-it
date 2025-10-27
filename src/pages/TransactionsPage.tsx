@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import { TransactionDialog } from '../components/TransactionDialog';
 import { TransactionTable } from '../components/TransactionTable';
+import { BudgetCard } from '../components/BudgetCard';
 import { mockTransactions, Transaction } from '../data/mockData';
 
 export const TransactionsPage: React.FC = () => {
@@ -30,6 +31,32 @@ export const TransactionsPage: React.FC = () => {
   const [transactions, setTransactions] = useState(mockTransactions);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
   const [csvFile, setCsvFile] = useState<File | null>(null);
+
+  // Calculate budget metrics
+  const monthlyBudget = 3000; // This could come from settings/user preferences
+  const totalExpenses = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = transactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Calculate top expense categories
+  const expensesByCategory = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((acc, t) => {
+      acc[t.category] = (acc[t.category] || 0) + t.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const topCategories = Object.entries(expensesByCategory)
+    .map(([category, amount]) => ({
+      category,
+      amount,
+      percentage: (amount / totalExpenses) * 100,
+    }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
 
   // Filter transactions based on search query
   const filteredTransactions = transactions.filter(transaction => {
@@ -239,6 +266,13 @@ export const TransactionsPage: React.FC = () => {
           }} />
         </Button>
       </Stack>
+
+      <BudgetCard
+        budgetTotal={monthlyBudget}
+        spent={totalExpenses}
+        income={totalIncome}
+        topCategories={topCategories}
+      />
 
       <TransactionTable
         transactions={filteredTransactions}
