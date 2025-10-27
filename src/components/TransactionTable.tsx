@@ -43,7 +43,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
         return (
           <Box
             sx={{
-              color: type === 'income' ? theme.palette.success.main : theme.palette.error.main,
+              color: type === 'income' ? '#14959c' : '#ff6f00',
               fontWeight: 'bold',
             }}
           >
@@ -59,9 +59,16 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
       renderCell: (params) => (
         <Chip
           label={params.value}
-          color={params.value === 'income' ? 'success' : 'error'}
           size="small"
-          sx={{ textTransform: 'capitalize' }}
+          sx={{
+            textTransform: 'capitalize',
+            background: params.value === 'income'
+              ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
+              : 'linear-gradient(135deg, #d84315 0%, #ff6f00 100%)',
+            color: '#ffffff',
+            fontWeight: 600,
+            border: 'none',
+          }}
         />
       ),
     },
