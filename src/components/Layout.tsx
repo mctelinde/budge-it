@@ -25,6 +25,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  AccountBalanceWallet,
 } from '@mui/icons-material';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -54,7 +55,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
     { text: 'Transactions', icon: <Receipt />, path: '/transactions' },
     { text: 'Bills', icon: <Description />, path: '/bills' },
     { text: 'Budget', icon: <AccountBalance />, path: '/budget' },
-    { text: 'Categories', icon: <Assessment />, path: '/categories' },
+    { text: 'Spending', icon: <Assessment />, path: '/spending' },
   ];
 
   const currentPage = menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard';
@@ -74,39 +75,68 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
         height: 64,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: desktopOpen ? 'space-between' : 'center',
         px: 2,
         background: 'none',
       }}>
-        {desktopOpen && (
-          <Typography
-            variant="h6"
+        {!desktopOpen && (
+          <IconButton
+            onClick={handleDesktopDrawerToggle}
             sx={{
-              fontFamily: '"Righteous", "Inter", sans-serif',
-              fontSize: '1.85rem',
-              fontWeight: 400,
-              letterSpacing: '0.5px',
               color: '#ffffff',
-              textShadow: '2px 2px 6px rgba(0, 0, 0, 0.3)',
-              whiteSpace: 'nowrap',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              },
             }}
           >
-            budge-it
-          </Typography>
+            <AccountBalanceWallet
+              sx={{
+                fontSize: '2.5rem',
+                filter: 'drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3))',
+              }}
+            />
+          </IconButton>
         )}
-        <IconButton
-          onClick={handleDesktopDrawerToggle}
-          sx={{
-            color: '#ffffff',
-            display: { xs: 'none', sm: 'flex' },
-            ml: desktopOpen ? 0 : 'auto',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            },
-          }}
-        >
-          {desktopOpen ? <ChevronLeft /> : <ChevronRight />}
-        </IconButton>
+        {desktopOpen && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <AccountBalanceWallet
+              sx={{
+                fontSize: '2rem',
+                color: '#ffffff',
+                filter: 'drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3))',
+              }}
+            />
+            <Typography
+              variant="h6"
+              sx={{
+                fontFamily: '"Righteous", "Inter", sans-serif',
+                fontSize: '1.85rem',
+                fontWeight: 400,
+                letterSpacing: '0.5px',
+                color: '#ffffff',
+                textShadow: '2px 2px 6px rgba(0, 0, 0, 0.3)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              budge-it
+            </Typography>
+          </Box>
+        )}
+        {desktopOpen && (
+          <IconButton
+            onClick={handleDesktopDrawerToggle}
+            sx={{
+              color: '#ffffff',
+              display: { xs: 'none', sm: 'flex' },
+              ml: desktopOpen ? 0 : 'auto',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              },
+            }}
+          >
+            {desktopOpen ? <ChevronLeft /> : <ChevronRight />}
+          </IconButton>
+        )}
       </Box>
       <List sx={{
         overflow: 'auto',
