@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Paper,
   Box,
@@ -7,42 +7,82 @@ import {
   useTheme,
   Button,
   Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
+  CircularProgress,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   PostAdd as PostAddIcon,
-  Upload as UploadIcon
+  Upload as UploadIcon,
+  AddCircleOutline as AddCircleOutlineIcon
 } from '@mui/icons-material';
 import { TransactionDialog } from '../components/TransactionDialog';
 import { TransactionTable } from '../components/TransactionTable';
 import { BudgetCard } from '../components/BudgetCard';
-import { mockTransactions, Transaction } from '../data/mockData';
+import { TransactionImportDialog } from '../components/TransactionImportDialog';
+import { BudgetDialog } from '../components/BudgetDialog';
+import { Transaction, Budget } from '../types/transaction';
+import { transactionService, budgetService } from '../db/services';
+import { calculateCumulativeBudget, calculateElapsedPeriods } from '../utils/budgetCalculations';
 
 export const TransactionsPage: React.FC = () => {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [transactions, setTransactions] = useState(mockTransactions);
+  const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
-  const [csvFile, setCsvFile] = useState<File | null>(null);
 
-  // Calculate budget metrics
-  const monthlyBudget = 3000; // This could come from settings/user preferences
-  const totalExpenses = transactions
+  // Load transactions and budgets from database
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [loadedTransactions, loadedBudgets] = await Promise.all([
+          transactionService.getAll(),
+          budgetService.getAll(),
+        ]);
+        setTransactions(loadedTransactions);
+        setBudgets(loadedBudgets);
+      } catch (error) {
+        console.error('Failed to load data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  // Refresh data from database
+  const refreshData = async () => {
+    const [loadedTransactions, loadedBudgets] = await Promise.all([
+      transactionService.getAll(),
+      budgetService.getAll(),
+    ]);
+    setTransactions(loadedTransactions);
+    setBudgets(loadedBudgets);
+  };
+
+  // Get the first budget (could be enhanced to let user select which budget)
+  const activeBudget = budgets.length > 0 ? budgets[0] : null;
+
+  // Calculate budget metrics from the active budget
+  const getBudgetTransactions = () => {
+    if (!activeBudget || !activeBudget.transactionIds) return [];
+    return transactions.filter(t => activeBudget.transactionIds?.includes(t.id));
+  };
+
+  const budgetTransactions = getBudgetTransactions();
+  const totalExpenses = budgetTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
-  const totalIncome = transactions
+  const totalIncome = budgetTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  // Calculate top expense categories
-  const expensesByCategory = transactions
+  // Calculate top expense categories from budget transactions
+  const expensesByCategory = budgetTransactions
     .filter(t => t.type === 'expense')
     .reduce((acc, t) => {
       acc[t.category] = (acc[t.category] || 0) + t.amount;
@@ -53,7 +93,7 @@ export const TransactionsPage: React.FC = () => {
     .map(([category, amount]) => ({
       category,
       amount,
-      percentage: (amount / totalExpenses) * 100,
+      percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0,
     }))
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
@@ -79,87 +119,71 @@ export const TransactionsPage: React.FC = () => {
     setDialogOpen(true);
   };
 
-  const handleSaveTransaction = (transactionData: Partial<Transaction>) => {
-    if (editingTransaction) {
-      // Update existing transaction
-      setTransactions(prev =>
-        prev.map(t => t.id === editingTransaction.id
-          ? { ...t, ...transactionData }
-          : t
-        )
-      );
-    } else {
-      // Add new transaction
-      const newTransaction: Transaction = {
-        id: Date.now().toString(),
-        date: transactionData.date || new Date().toISOString().split('T')[0],
-        description: transactionData.description || '',
-        amount: transactionData.amount || 0,
-        type: transactionData.type || 'expense',
-        category: transactionData.category || '',
-        account: transactionData.account || '',
-        notes: transactionData.notes,
-      };
-      setTransactions(prev => [...prev, newTransaction]);
-    }
-  };
-
-  const handleDeleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type === 'text/csv') {
-      setCsvFile(file);
-    } else {
-      alert('Please select a valid CSV file');
-    }
-  };
-
-  const handleImportCSV = () => {
-    if (!csvFile) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-
-      const importedTransactions: Transaction[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-
-        const values = lines[i].split(',').map(v => v.trim());
-        const transaction: any = {};
-
-        headers.forEach((header, index) => {
-          transaction[header] = values[index];
+  const handleSaveTransaction = async (transactionData: Partial<Transaction>) => {
+    try {
+      if (editingTransaction) {
+        // Update existing transaction
+        await transactionService.update(editingTransaction.id, transactionData);
+      } else {
+        // Add new transaction
+        await transactionService.create({
+          date: transactionData.date || new Date().toISOString().split('T')[0],
+          description: transactionData.description || '',
+          amount: transactionData.amount || 0,
+          type: transactionData.type || 'expense',
+          category: transactionData.category || '',
+          account: transactionData.account || '',
+          notes: transactionData.notes,
         });
-
-        // Create transaction object with proper typing
-        const newTransaction: Transaction = {
-          id: Date.now().toString() + i,
-          date: transaction.date || new Date().toISOString().split('T')[0],
-          description: transaction.description || '',
-          amount: parseFloat(transaction.amount) || 0,
-          type: (transaction.type?.toLowerCase() === 'income' ? 'income' : 'expense') as 'income' | 'expense',
-          category: transaction.category || '',
-          account: transaction.account || '',
-          notes: transaction.notes || '',
-        };
-
-        importedTransactions.push(newTransaction);
       }
-
-      setTransactions(prev => [...prev, ...importedTransactions]);
-      setImportDialogOpen(false);
-      setCsvFile(null);
-    };
-
-    reader.readAsText(csvFile);
+      await refreshData();
+    } catch (error) {
+      console.error('Failed to save transaction:', error);
+    }
   };
+
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      await transactionService.delete(id);
+      await refreshData();
+    } catch (error) {
+      console.error('Failed to delete transaction:', error);
+    }
+  };
+
+  const handleImportTransactions = async (importedTransactions: Transaction[]) => {
+    try {
+      await transactionService.bulkCreate(importedTransactions);
+      await refreshData();
+    } catch (error) {
+      console.error('Failed to import transactions:', error);
+      throw error;
+    }
+  };
+
+  const handleSaveBudget = async (budgetData: Partial<Budget>) => {
+    try {
+      await budgetService.create({
+        title: budgetData.title || '',
+        amount: budgetData.amount || 0,
+        spent: 0,
+        period: budgetData.period || 'monthly',
+        categories: budgetData.categories || [],
+        transactionIds: [],
+      });
+      await refreshData();
+    } catch (error) {
+      console.error('Failed to save budget:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress sx={{ color: '#14959c' }} />
+      </Box>
+    );
+  }
 
   return (
     <Paper
@@ -267,12 +291,57 @@ export const TransactionsPage: React.FC = () => {
         </Button>
       </Stack>
 
-      <BudgetCard
-        budgetTotal={monthlyBudget}
-        spent={totalExpenses}
-        income={totalIncome}
-        topCategories={topCategories}
-      />
+      {activeBudget ? (
+        <BudgetCard
+          budgetTotal={activeBudget.amount}
+          spent={totalExpenses}
+          income={totalIncome}
+          topCategories={topCategories}
+          startingBalance={activeBudget.startingBalance}
+          startDate={activeBudget.startDate}
+          cumulativeBudget={calculateCumulativeBudget(activeBudget)}
+          elapsedPeriods={calculateElapsedPeriods(activeBudget.startDate, activeBudget.period)}
+        />
+      ) : (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            mb: 3,
+            borderRadius: 3,
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+            textAlign: 'center',
+          }}
+        >
+          <Box sx={{ mb: 2 }}>
+            <AddCircleOutlineIcon
+              sx={{
+                fontSize: 60,
+                color: theme.palette.text.secondary,
+                opacity: 0.5,
+              }}
+            />
+          </Box>
+          <Box sx={{ mb: 2, color: theme.palette.text.secondary }}>
+            No budget configured. Create a budget to track your spending.
+          </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setBudgetDialogOpen(true)}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              px: 3,
+              background: theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
+                : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
+            }}
+          >
+            Create Budget
+          </Button>
+        </Paper>
+      )}
 
       <TransactionTable
         transactions={filteredTransactions}
@@ -288,71 +357,18 @@ export const TransactionsPage: React.FC = () => {
         isEditing={!!editingTransaction}
       />
 
-      <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Import Transactions from CSV</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2, mt: 1, color: 'text.secondary' }}>
-            Upload a CSV file with the following columns: date, description, amount, type, category, account, notes
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-            Example format: 2025-10-26, Grocery Shopping, 150.00, expense, Groceries, Chase Card, Weekly shopping
-          </Typography>
-          <Button
-            variant="outlined"
-            component="label"
-            fullWidth
-            sx={{ mb: 2 }}
-          >
-            Choose CSV File
-            <input
-              type="file"
-              accept=".csv"
-              hidden
-              onChange={handleFileChange}
-            />
-          </Button>
-          {csvFile && (
-            <Typography variant="body2" sx={{ color: 'success.main' }}>
-              Selected file: {csvFile.name}
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button
-            onClick={() => {
-              setImportDialogOpen(false);
-              setCsvFile(null);
-            }}
-            sx={{
-              color: theme.palette.text.primary,
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark'
-                  ? 'rgba(255, 255, 255, 0.08)'
-                  : 'rgba(0, 0, 0, 0.04)',
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleImportCSV}
-            variant="contained"
-            disabled={!csvFile}
-            sx={{
-              background: theme.palette.mode === 'dark'
-                ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
-                : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
-              '&:hover': {
-                background: theme.palette.mode === 'dark'
-                  ? 'linear-gradient(135deg, #0a5c5f 0%, #107a80 100%)'
-                  : 'linear-gradient(135deg, #107a80 0%, #1aa3a9 100%)',
-              }
-            }}
-          >
-            Import
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <TransactionImportDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImport={handleImportTransactions}
+        existingTransactions={transactions}
+      />
+
+      <BudgetDialog
+        open={budgetDialogOpen}
+        onClose={() => setBudgetDialogOpen(false)}
+        onSave={handleSaveBudget}
+      />
     </Paper>
   );
 };

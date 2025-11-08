@@ -8,4 +8,18 @@ export interface Transaction {
   account: string;
   notes?: string;
   status?: 'pending' | 'cleared' | 'reconciled';
+  budgetId?: string;
+}
+
+export interface Budget {
+  id: string;
+  title: string;
+  amount: number;
+  spent: number;
+  period: 'monthly' | 'weekly' | 'yearly';
+  createdAt: string;
+  categories?: string[];
+  transactionIds?: string[];
+  startingBalance?: number;
+  startDate?: string;
 }

@@ -14,27 +14,55 @@ import {
   ExpandMore as ExpandMoreIcon,
   TrendingUp,
   TrendingDown,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
+import { Button } from '@mui/material';
 
 interface BudgetCardProps {
+  title?: string;
+  period?: 'monthly' | 'weekly' | 'yearly';
   budgetTotal: number;
   spent: number;
   income: number;
   topCategories: { category: string; amount: number; percentage: number }[];
+  transactionCount?: number;
+  startingBalance?: number;
+  startDate?: string;
+  cumulativeBudget?: number; // Total budget accumulated over time
+  elapsedPeriods?: number; // Number of periods that have passed
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onManageTransactions?: () => void;
 }
 
 export const BudgetCard: React.FC<BudgetCardProps> = ({
+  title = 'Monthly Budget Overview',
+  period = 'monthly',
   budgetTotal,
   spent,
   income,
   topCategories,
+  transactionCount = 0,
+  startingBalance = 0,
+  startDate,
+  cumulativeBudget,
+  elapsedPeriods,
+  onEdit,
+  onDelete,
+  onManageTransactions,
 }) => {
   const theme = useTheme();
   const [expanded, setExpanded] = React.useState(true);
 
-  const remaining = budgetTotal - spent;
-  const percentageUsed = (spent / budgetTotal) * 100;
+  // Use cumulative budget if provided, otherwise fall back to single period
+  const totalBudgetAvailable = cumulativeBudget ?? budgetTotal;
+  const totalAvailable = startingBalance + totalBudgetAvailable;
+  const remaining = totalAvailable - spent;
+  const percentageUsed = totalAvailable > 0 ? (spent / totalAvailable) * 100 : 0;
   const netBalance = income - spent;
+  const currentBalance = startingBalance + netBalance;
 
   const getProgressColor = () => {
     if (percentageUsed < 70) return '#14959c';
@@ -57,15 +85,56 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
       }}
     >
       <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#14959c' }}>
-            Monthly Budget Overview
-          </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box sx={{ flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: '#14959c' }}>
+                {title}
+              </Typography>
+              {(onEdit || onDelete) && (
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  {onEdit && (
+                    <IconButton
+                      size="small"
+                      onClick={onEdit}
+                      sx={{
+                        padding: '4px',
+                        '&:hover': {
+                          backgroundColor: 'rgba(20, 149, 156, 0.1)',
+                        },
+                      }}
+                    >
+                      <EditIcon sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                  )}
+                  {onDelete && (
+                    <IconButton
+                      size="small"
+                      onClick={onDelete}
+                      sx={{
+                        padding: '4px',
+                        '&:hover': {
+                          backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                        },
+                      }}
+                    >
+                      <DeleteIcon sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                  )}
+                </Box>
+              )}
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>
+              {period}
+              {startDate && ` • Since ${new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+            </Typography>
+          </Box>
           <IconButton
             onClick={() => setExpanded(!expanded)}
             sx={{
               transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
               transition: 'transform 0.3s',
+              ml: 1,
             }}
           >
             <ExpandMoreIcon />
@@ -85,11 +154,16 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
             >
               <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  Budget
+                  {elapsedPeriods && elapsedPeriods > 1 ? `Budget (${elapsedPeriods} periods)` : 'Budget'}
                 </Typography>
                 <Typography variant="h5" sx={{ fontWeight: 600, color: '#14959c' }}>
-                  ${budgetTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${totalBudgetAvailable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
+                {elapsedPeriods && elapsedPeriods > 1 && (
+                  <Typography variant="caption" color="text.secondary">
+                    ${budgetTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per period
+                  </Typography>
+                )}
               </Box>
 
               <Box>
@@ -112,10 +186,57 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                     color: remaining >= 0 ? '#14959c' : '#d84315',
                   }}
                 >
-                  ${Math.abs(remaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {remaining >= 0 ? '' : '-'}${Math.abs(remaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
               </Box>
             </Box>
+
+            {/* Balance Tracking */}
+            {startingBalance !== 0 && (
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+                  gap: 3,
+                  mb: 3,
+                  p: 2,
+                  borderRadius: 2,
+                  backgroundColor: theme.palette.mode === 'dark'
+                    ? 'rgba(255, 255, 255, 0.03)'
+                    : 'rgba(0, 0, 0, 0.02)',
+                }}
+              >
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Starting Balance
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 600,
+                      color: startingBalance >= 0 ? '#14959c' : '#d84315',
+                    }}
+                  >
+                    {startingBalance >= 0 ? '+' : '-'}${Math.abs(startingBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Typography>
+                </Box>
+
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Current Balance
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 600,
+                      color: currentBalance >= 0 ? '#14959c' : '#d84315',
+                    }}
+                  >
+                    {currentBalance >= 0 ? '+' : '-'}${Math.abs(currentBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
 
             {/* Progress Bar */}
             <Box sx={{ mb: 3 }}>
@@ -143,6 +264,43 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                 }}
               />
             </Box>
+
+            {/* Transaction Allocation */}
+            {onManageTransactions && (
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Allocated Transactions
+                  </Typography>
+                  <Chip
+                    label={`${transactionCount} transaction${transactionCount !== 1 ? 's' : ''}`}
+                    size="small"
+                    sx={{
+                      backgroundColor: '#14959c',
+                      color: 'white',
+                      fontWeight: 500,
+                    }}
+                  />
+                </Box>
+                <Button
+                  variant="outlined"
+                  startIcon={<AssignmentIcon />}
+                  onClick={onManageTransactions}
+                  fullWidth
+                  size="small"
+                  sx={{
+                    borderColor: '#14959c',
+                    color: '#14959c',
+                    '&:hover': {
+                      borderColor: '#0d7378',
+                      backgroundColor: 'rgba(20, 149, 156, 0.08)',
+                    },
+                  }}
+                >
+                  Manage Transactions
+                </Button>
+              </Box>
+            )}
 
             {/* Net Balance */}
             <Box

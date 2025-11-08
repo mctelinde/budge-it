@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -40,8 +40,35 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
     category: '',
     account: '',
     notes: '',
-    ...transaction,
   });
+
+  // Update form data when transaction prop changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      if (transaction) {
+        setFormData({
+          date: transaction.date,
+          description: transaction.description,
+          amount: transaction.amount,
+          type: transaction.type,
+          category: transaction.category,
+          account: transaction.account,
+          notes: transaction.notes || '',
+        });
+      } else {
+        // Reset to default values for new transaction
+        setFormData({
+          date: new Date().toISOString().split('T')[0],
+          description: '',
+          amount: 0,
+          type: 'expense',
+          category: '',
+          account: '',
+          notes: '',
+        });
+      }
+    }
+  }, [open, transaction]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

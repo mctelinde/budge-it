@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Paper,
   Typography,
@@ -8,16 +8,28 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
 } from '@mui/material';
 import {
   Category as CategoryIcon,
   AccountBalance,
   Notifications,
   Palette,
+  DeleteSweep as DeleteSweepIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
+import { databaseService } from '../db/services';
 
 export const SettingsPage: React.FC = () => {
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
   const settingsItems = [
     {
       title: 'Manage Categories',
@@ -44,6 +56,21 @@ export const SettingsPage: React.FC = () => {
       path: '/app/settings/appearance',
     },
   ];
+
+  const handleClearData = async () => {
+    setClearing(true);
+    try {
+      await databaseService.clearAll();
+      setConfirmDialogOpen(false);
+      // Reload the page to refresh all data
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to clear data:', error);
+      alert('Failed to clear data. Please try again.');
+    } finally {
+      setClearing(false);
+    }
+  };
 
   return (
     <Paper
@@ -103,6 +130,99 @@ export const SettingsPage: React.FC = () => {
           ))}
         </List>
       </Paper>
+
+      {/* Data Management Section */}
+      <Paper
+        elevation={0}
+        sx={{
+          backgroundColor: (theme) => theme.palette.mode === 'dark'
+            ? 'rgba(0, 0, 0, 0.2)'
+            : 'rgba(255, 255, 255, 0.8)',
+          borderRadius: 2,
+          mt: 3,
+          p: 3,
+        }}
+      >
+        <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+          Data Management
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Manage your application data
+        </Typography>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <DeleteSweepIcon sx={{ color: '#d32f2f', fontSize: 40 }} />
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              Clear All Data
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Remove all transactions, budgets, and settings. This action cannot be undone.
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteSweepIcon />}
+            onClick={() => setConfirmDialogOpen(true)}
+            sx={{
+              borderColor: '#d32f2f',
+              color: '#d32f2f',
+              '&:hover': {
+                borderColor: '#b71c1c',
+                backgroundColor: 'rgba(211, 47, 47, 0.08)',
+              },
+            }}
+          >
+            Clear Data
+          </Button>
+        </Box>
+      </Paper>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={() => !clearing && setConfirmDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon sx={{ color: '#ff9800' }} />
+          Confirm Clear All Data
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            This will permanently delete all your data including:
+          </Alert>
+          <Box component="ul" sx={{ pl: 2 }}>
+            <li>All transactions</li>
+            <li>All budgets and allocations</li>
+            <li>All settings and preferences</li>
+          </Box>
+          <Typography variant="body2" sx={{ mt: 2, fontWeight: 600 }}>
+            This action cannot be undone. Are you sure you want to continue?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setConfirmDialogOpen(false)} disabled={clearing}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleClearData}
+            variant="contained"
+            color="error"
+            disabled={clearing}
+            sx={{
+              backgroundColor: '#d32f2f',
+              '&:hover': {
+                backgroundColor: '#b71c1c',
+              },
+            }}
+          >
+            {clearing ? 'Clearing...' : 'Yes, Clear All Data'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
