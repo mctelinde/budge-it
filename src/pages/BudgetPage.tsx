@@ -199,6 +199,7 @@ export const BudgetPage: React.FC = () => {
             const transactionCount = budget.transactionIds?.length || 0;
             const cumulativeBudget = calculateCumulativeBudget(budget);
             const elapsedPeriods = calculateElapsedPeriods(budget.startDate, budget.period);
+            const allocatedTxns = transactions.filter(t => budget.transactionIds?.includes(t.id));
 
             return (
               <Box key={budget.id}>
@@ -207,13 +208,13 @@ export const BudgetPage: React.FC = () => {
                   period={budget.period}
                   budgetTotal={budget.amount}
                   spent={spent}
-                  income={0}
                   topCategories={[]}
                   transactionCount={transactionCount}
                   startingBalance={budget.startingBalance}
                   startDate={budget.startDate}
                   cumulativeBudget={cumulativeBudget}
                   elapsedPeriods={elapsedPeriods}
+                  allocatedTransactions={allocatedTxns}
                   onEdit={() => handleEditClick(budget)}
                   onDelete={() => handleDeleteBudget(budget.id)}
                   onManageTransactions={() => handleManageTransactions(budget)}

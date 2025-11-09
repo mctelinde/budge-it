@@ -295,7 +295,6 @@ export const TransactionsPage: React.FC = () => {
         <BudgetCard
           budgetTotal={activeBudget.amount}
           spent={totalExpenses}
-          income={totalIncome}
           topCategories={topCategories}
           startingBalance={activeBudget.startingBalance}
           startDate={activeBudget.startDate}

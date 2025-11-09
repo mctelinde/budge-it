@@ -17,8 +17,10 @@ import {
   InputAdornment,
   Chip,
   Divider,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';
-import { Search as SearchIcon } from '@mui/icons-material';
+import { Search as SearchIcon, FilterList as FilterListIcon } from '@mui/icons-material';
 import { Transaction, Budget } from '../types/transaction';
 
 interface TransactionAllocationDialogProps {
@@ -38,24 +40,35 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>(budget.transactionIds || []);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showOnlyAllocated, setShowOnlyAllocated] = useState(false);
 
   // Filter transactions - only show expenses
   const expenseTransactions = useMemo(() => {
     return allTransactions.filter((t) => t.type === 'expense');
   }, [allTransactions]);
 
-  // Filter by search query
+  // Filter by search query and allocation status
   const filteredTransactions = useMemo(() => {
-    if (!searchQuery.trim()) return expenseTransactions;
+    let filtered = expenseTransactions;
 
-    const query = searchQuery.toLowerCase();
-    return expenseTransactions.filter(
-      (t) =>
-        t.description.toLowerCase().includes(query) ||
-        t.category.toLowerCase().includes(query) ||
-        t.amount.toString().includes(query)
-    );
-  }, [expenseTransactions, searchQuery]);
+    // Filter by allocation status
+    if (showOnlyAllocated) {
+      filtered = filtered.filter((t) => selectedIds.includes(t.id));
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (t) =>
+          t.description.toLowerCase().includes(query) ||
+          t.category.toLowerCase().includes(query) ||
+          t.amount.toString().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [expenseTransactions, searchQuery, showOnlyAllocated, selectedIds]);
 
   // Calculate total of selected transactions
   const selectedTotal = useMemo(() => {
@@ -88,6 +101,7 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
   const handleClose = () => {
     setSelectedIds(budget.transactionIds || []);
     setSearchQuery('');
+    setShowOnlyAllocated(false);
     onClose();
   };
 
@@ -120,6 +134,36 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
               ),
             }}
           />
+        </Box>
+
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <FilterListIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+          <ToggleButtonGroup
+            value={showOnlyAllocated ? 'allocated' : 'all'}
+            exclusive
+            onChange={(e, newValue) => {
+              if (newValue !== null) {
+                setShowOnlyAllocated(newValue === 'allocated');
+              }
+            }}
+            size="small"
+            sx={{
+              '& .MuiToggleButton-root': {
+                textTransform: 'none',
+                px: 2,
+                '&.Mui-selected': {
+                  backgroundColor: '#14959c',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#0d7378',
+                  },
+                },
+              },
+            }}
+          >
+            <ToggleButton value="all">All Transactions</ToggleButton>
+            <ToggleButton value="allocated">Allocated Only</ToggleButton>
+          </ToggleButtonGroup>
         </Box>
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>

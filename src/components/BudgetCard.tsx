@@ -19,19 +19,22 @@ import {
   Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import { Button } from '@mui/material';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
+import { Transaction } from '../types/transaction';
+import { generateBudgetLifecycleData } from '../utils/budgetGraphData';
 
 interface BudgetCardProps {
   title?: string;
   period?: 'monthly' | 'weekly' | 'yearly';
   budgetTotal: number;
   spent: number;
-  income: number;
   topCategories: { category: string; amount: number; percentage: number }[];
   transactionCount?: number;
   startingBalance?: number;
   startDate?: string;
   cumulativeBudget?: number; // Total budget accumulated over time
   elapsedPeriods?: number; // Number of periods that have passed
+  allocatedTransactions?: Transaction[]; // Transactions allocated to this budget
   onEdit?: () => void;
   onDelete?: () => void;
   onManageTransactions?: () => void;
@@ -42,13 +45,13 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   period = 'monthly',
   budgetTotal,
   spent,
-  income,
   topCategories,
   transactionCount = 0,
   startingBalance = 0,
   startDate,
   cumulativeBudget,
   elapsedPeriods,
+  allocatedTransactions = [],
   onEdit,
   onDelete,
   onManageTransactions,
@@ -61,8 +64,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   const totalAvailable = startingBalance + totalBudgetAvailable;
   const remaining = totalAvailable - spent;
   const percentageUsed = totalAvailable > 0 ? (spent / totalAvailable) * 100 : 0;
-  const netBalance = income - spent;
-  const currentBalance = startingBalance + netBalance;
 
   const getProgressColor = () => {
     if (percentageUsed < 70) return '#14959c';
@@ -191,13 +192,10 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
               </Box>
             </Box>
 
-            {/* Balance Tracking */}
+            {/* Starting Balance Display */}
             {startingBalance !== 0 && (
               <Box
                 sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-                  gap: 3,
                   mb: 3,
                   p: 2,
                   borderRadius: 2,
@@ -206,35 +204,18 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                     : 'rgba(0, 0, 0, 0.02)',
                 }}
               >
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Starting Balance
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 600,
-                      color: startingBalance >= 0 ? '#14959c' : '#d84315',
-                    }}
-                  >
-                    {startingBalance >= 0 ? '+' : '-'}${Math.abs(startingBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </Typography>
-                </Box>
-
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Current Balance
-                  </Typography>
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 600,
-                      color: currentBalance >= 0 ? '#14959c' : '#d84315',
-                    }}
-                  >
-                    {currentBalance >= 0 ? '+' : '-'}${Math.abs(currentBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </Typography>
-                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  Starting Balance
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 600,
+                    color: startingBalance >= 0 ? '#14959c' : '#d84315',
+                  }}
+                >
+                  {startingBalance >= 0 ? '+' : '-'}${Math.abs(startingBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Typography>
               </Box>
             )}
 
@@ -302,44 +283,82 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
               </Box>
             )}
 
-            {/* Net Balance */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                p: 2,
-                borderRadius: 2,
-                background: theme.palette.mode === 'dark'
-                  ? netBalance >= 0
-                    ? 'rgba(20, 149, 156, 0.1)'
-                    : 'rgba(216, 67, 21, 0.1)'
-                  : netBalance >= 0
-                    ? 'rgba(20, 149, 156, 0.05)'
-                    : 'rgba(216, 67, 21, 0.05)',
-                mb: 3,
-              }}
-            >
-              {netBalance >= 0 ? (
-                <TrendingUp sx={{ color: '#14959c', fontSize: '2rem' }} />
-              ) : (
-                <TrendingDown sx={{ color: '#d84315', fontSize: '2rem' }} />
-              )}
-              <Box>
-                <Typography variant="body2" color="text.secondary">
-                  Net Balance (Income - Expenses)
+            {/* Budget Lifecycle Graph */}
+            {startDate && allocatedTransactions.length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Budget Lifecycle
                 </Typography>
-                <Typography
-                  variant="h6"
+                <Box
                   sx={{
-                    fontWeight: 600,
-                    color: netBalance >= 0 ? '#14959c' : '#d84315',
+                    p: 2,
+                    borderRadius: 2,
+                    backgroundColor: theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.03)'
+                      : 'rgba(0, 0, 0, 0.02)',
                   }}
                 >
-                  {netBalance >= 0 ? '+' : '-'}${Math.abs(netBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Typography>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <ComposedChart
+                      data={generateBudgetLifecycleData({
+                        id: '',
+                        title: title || '',
+                        amount: budgetTotal,
+                        spent: 0,
+                        period,
+                        createdAt: '',
+                        startDate,
+                        startingBalance
+                      } as any, allocatedTransactions)}
+                      margin={{ top: 5, right: 5, left: -20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis
+                        dataKey="displayDate"
+                        tick={{ fontSize: 12 }}
+                        stroke={theme.palette.text.secondary}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12 }}
+                        stroke={theme.palette.text.secondary}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#ffffff',
+                          border: '1px solid #14959c',
+                          borderRadius: 8,
+                        }}
+                        formatter={(value: number) => `$${value.toFixed(2)}`}
+                      />
+                      <Legend
+                        wrapperStyle={{ fontSize: '12px' }}
+                        iconType="circle"
+                      />
+                      <Bar
+                        dataKey="credit"
+                        fill="#14959c"
+                        name="Budget Added"
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="debit"
+                        fill="#ff6f00"
+                        name="Spent"
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="balance"
+                        stroke="#0d7377"
+                        strokeWidth={2}
+                        name="Balance"
+                        dot={{ r: 3 }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </Box>
               </Box>
-            </Box>
+            )}
 
             {/* Top Expense Categories */}
             <Box>
