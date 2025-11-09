@@ -33,6 +33,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
   const [period, setPeriod] = useState<'monthly' | 'weekly' | 'yearly'>('monthly');
   const [startingBalance, setStartingBalance] = useState('');
   const [startDate, setStartDate] = useState('');
+  const [rolloverDay, setRolloverDay] = useState('1');
 
   useEffect(() => {
     if (budget) {
@@ -41,12 +42,14 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
       setPeriod(budget.period);
       setStartingBalance(budget.startingBalance?.toString() || '');
       setStartDate(budget.startDate || '');
+      setRolloverDay(budget.rolloverDay?.toString() || '1');
     } else {
       setTitle('');
       setAmount('');
       setPeriod('monthly');
       setStartingBalance('');
       setStartDate(new Date().toISOString().split('T')[0]); // Default to today
+      setRolloverDay('1');
     }
   }, [budget, open]);
 
@@ -60,6 +63,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
         categories: budget?.categories || [],
         startingBalance: startingBalance ? parseFloat(startingBalance) : 0,
         startDate: startDate || new Date().toISOString().split('T')[0],
+        rolloverDay: rolloverDay ? parseInt(rolloverDay) : 1,
       });
       handleClose();
     }
@@ -71,6 +75,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
     setPeriod('monthly');
     setStartingBalance('');
     setStartDate('');
+    setRolloverDay('1');
     onClose();
   };
 
@@ -136,6 +141,24 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
               shrink: true,
             }}
             helperText="Budget tracking begins on this date"
+          />
+
+          <TextField
+            label="Rollover Day"
+            type="number"
+            value={rolloverDay}
+            onChange={(e) => {
+              const value = parseInt(e.target.value);
+              if (value >= 1 && value <= 31) {
+                setRolloverDay(e.target.value);
+              } else if (e.target.value === '') {
+                setRolloverDay('');
+              }
+            }}
+            fullWidth
+            required
+            inputProps={{ min: 1, max: 31 }}
+            helperText="Day of month when budget amount is credited (1-31)"
           />
 
           <FormControl fullWidth>

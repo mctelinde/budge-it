@@ -13,10 +13,17 @@ import { SettingsPage } from './pages/SettingsPage';
 import { CategoryManagementPage } from './pages/CategoryManagementPage';
 
 function App() {
-  const [isDarkMode, setIsDarkMode] = React.useState(false);
+  const [isDarkMode, setIsDarkMode] = React.useState(() => {
+    const savedMode = localStorage.getItem('darkMode');
+    return savedMode === 'true';
+  });
 
   const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
+    setIsDarkMode((prev) => {
+      const newMode = !prev;
+      localStorage.setItem('darkMode', String(newMode));
+      return newMode;
+    });
   };
 
   return (

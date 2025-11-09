@@ -22,7 +22,7 @@ import {
   Error as ErrorIcon,
 } from '@mui/icons-material';
 import { Transaction } from '../types/transaction';
-import { importChaseCSV, importPayPalCSV, detectDuplicates } from '../utils/csvImport';
+import { importChaseCSV, importPayPalCSV, importTFCUCSV, detectDuplicates } from '../utils/csvImport';
 import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 
 interface TransactionImportDialogProps {
@@ -44,7 +44,7 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
   const [duplicates, setDuplicates] = useState<Transaction[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [step, setStep] = useState<'select' | 'preview' | 'complete'>('select');
-  const [format, setFormat] = useState<'chase' | 'paypal'>('chase');
+  const [format, setFormat] = useState<'chase' | 'paypal' | 'tfcu'>('chase');
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -57,9 +57,14 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
 
     try {
       // Use the appropriate import function based on selected format
-      const result = format === 'chase'
-        ? await importChaseCSV(selectedFile)
-        : await importPayPalCSV(selectedFile);
+      let result;
+      if (format === 'chase') {
+        result = await importChaseCSV(selectedFile);
+      } else if (format === 'paypal') {
+        result = await importPayPalCSV(selectedFile);
+      } else {
+        result = await importTFCUCSV(selectedFile);
+      }
 
       if (!result.success) {
         setErrors(result.errors);
@@ -105,14 +110,15 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
 
   const renderSelectStep = () => (
     <>
-      <DialogContent sx={{ pt: 3 }}>
-        <FormControl fullWidth sx={{ mb: 3 }}>
+      <DialogContent sx={{ pt: 4 }}>
+        <FormControl fullWidth sx={{ mb: 3, mt: 1 }}>
           <InputLabel>Bank/Service</InputLabel>
           <Select
             value={format}
             label="Bank/Service"
-            onChange={(e) => setFormat(e.target.value as 'chase' | 'paypal')}
+            onChange={(e) => setFormat(e.target.value as 'chase' | 'paypal' | 'tfcu')}
           >
+            <MenuItem value="tfcu">Tinker Federal Credit Union</MenuItem>
             <MenuItem value="chase">Chase Bank</MenuItem>
             <MenuItem value="paypal">PayPal</MenuItem>
           </Select>
@@ -142,13 +148,13 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
           />
           <UploadIcon sx={{ fontSize: 48, color: '#14959c', mb: 2 }} />
           <Typography variant="h6" gutterBottom>
-            Upload {format === 'chase' ? 'Chase' : 'PayPal'} CSV Export
+            Upload {format === 'chase' ? 'Chase' : format === 'paypal' ? 'PayPal' : 'TFCU'} CSV Export
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Click to select a file or drag and drop
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            Supported format: {format === 'chase' ? 'Chase Bank' : 'PayPal'} CSV export
+            Supported format: {format === 'chase' ? 'Chase Bank' : format === 'paypal' ? 'PayPal' : 'TFCU'} CSV export
           </Typography>
         </Box>
 
@@ -169,7 +175,7 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
 
         <Box sx={{ mt: 3 }}>
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            <strong>How to export from {format === 'chase' ? 'Chase' : 'PayPal'}:</strong>
+            <strong>How to export from {format === 'chase' ? 'Chase' : format === 'paypal' ? 'PayPal' : 'TFCU'}:</strong>
           </Typography>
           {format === 'chase' ? (
             <Typography variant="caption" color="text.secondary" component="div">
@@ -179,12 +185,20 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
               4. Select CSV format and date range<br />
               5. Upload the downloaded file here
             </Typography>
-          ) : (
+          ) : format === 'paypal' ? (
             <Typography variant="caption" color="text.secondary" component="div">
               1. Log in to your PayPal account<br />
               2. Go to "Activity" or "Statements"<br />
               3. Click "Statements" → "Custom" or "Download"<br />
               4. Select date range and download CSV<br />
+              5. Upload the downloaded file here
+            </Typography>
+          ) : (
+            <Typography variant="caption" color="text.secondary" component="div">
+              1. Log in to Tinker FCU online banking<br />
+              2. Navigate to your checking account<br />
+              3. Click "Download Transactions" or "Export"<br />
+              4. Select CSV format and date range<br />
               5. Upload the downloaded file here
             </Typography>
           )}

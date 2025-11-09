@@ -299,7 +299,7 @@ export const TransactionsPage: React.FC = () => {
           startingBalance={activeBudget.startingBalance}
           startDate={activeBudget.startDate}
           cumulativeBudget={calculateCumulativeBudget(activeBudget)}
-          elapsedPeriods={calculateElapsedPeriods(activeBudget.startDate, activeBudget.period)}
+          elapsedPeriods={calculateElapsedPeriods(activeBudget.startDate, activeBudget.period, activeBudget.rolloverDay)}
         />
       ) : (
         <Paper

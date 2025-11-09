@@ -1,14 +1,15 @@
 import { Budget } from '../types/transaction';
 
 /**
- * Calculate how many budget periods have elapsed from start date to current date
- * For monthly budgets: counts the number of 1st days of the month that have passed
+ * Calculate how many budget periods have elapsed based on rollover day
+ * For monthly budgets with rollover day: counts credits applied on rollover days since start
  * For weekly budgets: counts the number of weeks
  * For yearly budgets: counts the number of years
  */
 export const calculateElapsedPeriods = (
   startDate: string | undefined,
-  period: 'monthly' | 'weekly' | 'yearly'
+  period: 'monthly' | 'weekly' | 'yearly',
+  rolloverDay?: number
 ): number => {
   if (!startDate) {
     // If no start date, assume 1 period (current period only)
@@ -25,13 +26,40 @@ export const calculateElapsedPeriods = (
 
   switch (period) {
     case 'monthly': {
-      // Count the number of months elapsed (including partial months)
-      const yearsDiff = now.getFullYear() - start.getFullYear();
-      const monthsDiff = now.getMonth() - start.getMonth();
-      const totalMonths = yearsDiff * 12 + monthsDiff;
+      if (rolloverDay) {
+        // Count how many rollover days have passed since start date
+        let count = 0;
+        const currentDate = new Date(start);
 
-      // Add 1 to include the starting month
-      return totalMonths + 1;
+        // Move to the first rollover day on or after start date
+        const startMonth = currentDate.getMonth();
+        const startYear = currentDate.getFullYear();
+
+        // Set to rollover day of the start month
+        let rolloverDate = new Date(startYear, startMonth, rolloverDay);
+
+        // If start date is after the rollover day this month, move to next month
+        if (start > rolloverDate) {
+          rolloverDate = new Date(startYear, startMonth + 1, rolloverDay);
+        }
+
+        // Count all rollover dates that have passed
+        while (rolloverDate <= now) {
+          count++;
+          // Move to next month's rollover day
+          const nextMonth = rolloverDate.getMonth() + 1;
+          const nextYear = rolloverDate.getFullYear();
+          rolloverDate = new Date(nextYear, nextMonth, rolloverDay);
+        }
+
+        return count;
+      } else {
+        // Legacy behavior: Count the number of months elapsed
+        const yearsDiff = now.getFullYear() - start.getFullYear();
+        const monthsDiff = now.getMonth() - start.getMonth();
+        const totalMonths = yearsDiff * 12 + monthsDiff;
+        return totalMonths + 1;
+      }
     }
 
     case 'weekly': {
@@ -63,7 +91,7 @@ export const calculateElapsedPeriods = (
 export const calculateCumulativeBudget = (
   budget: Budget
 ): number => {
-  const periods = calculateElapsedPeriods(budget.startDate, budget.period);
+  const periods = calculateElapsedPeriods(budget.startDate, budget.period, budget.rolloverDay);
   return budget.amount * periods;
 };
 

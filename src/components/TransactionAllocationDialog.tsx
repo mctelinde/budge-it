@@ -29,6 +29,7 @@ interface TransactionAllocationDialogProps {
   budget: Budget;
   allTransactions: Transaction[];
   onSave: (budgetId: string, transactionIds: string[]) => void;
+  initialFilterAllocated?: boolean;
 }
 
 export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogProps> = ({
@@ -37,10 +38,18 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
   budget,
   allTransactions,
   onSave,
+  initialFilterAllocated = false,
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>(budget.transactionIds || []);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showOnlyAllocated, setShowOnlyAllocated] = useState(false);
+  const [showOnlyAllocated, setShowOnlyAllocated] = useState(initialFilterAllocated);
+
+  // Reset filter when dialog opens
+  React.useEffect(() => {
+    if (open) {
+      setShowOnlyAllocated(initialFilterAllocated);
+    }
+  }, [open, initialFilterAllocated]);
 
   // Filter transactions - only show expenses
   const expenseTransactions = useMemo(() => {

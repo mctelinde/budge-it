@@ -6,6 +6,7 @@ import {
   Paper,
   Stack,
   CircularProgress,
+  Fab,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -25,6 +26,7 @@ export const BudgetPage: React.FC = () => {
   const [editingBudget, setEditingBudget] = useState<Budget | undefined>(undefined);
   const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
   const [allocatingBudget, setAllocatingBudget] = useState<Budget | undefined>(undefined);
+  const [showAllocatedFilter, setShowAllocatedFilter] = useState(false);
 
   // Load data from IndexedDB on component mount
   useEffect(() => {
@@ -100,14 +102,16 @@ export const BudgetPage: React.FC = () => {
     setEditingBudget(undefined);
   };
 
-  const handleManageTransactions = (budget: Budget) => {
+  const handleManageTransactions = (budget: Budget, showFilterAllocated: boolean = false) => {
     setAllocatingBudget(budget);
+    setShowAllocatedFilter(showFilterAllocated);
     setAllocationDialogOpen(true);
   };
 
   const handleAllocationDialogClose = () => {
     setAllocationDialogOpen(false);
     setAllocatingBudget(undefined);
+    setShowAllocatedFilter(false);
   };
 
   const handleSaveAllocation = async (budgetId: string, transactionIds: string[]) => {
@@ -139,26 +143,7 @@ export const BudgetPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ pt: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h5" sx={{ fontWeight: 600 }}>
-          My Budgets
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setDialogOpen(true)}
-          sx={{
-            backgroundColor: '#14959c',
-            '&:hover': {
-              backgroundColor: '#0d7378',
-            },
-          }}
-        >
-          Create Budget
-        </Button>
-      </Box>
-
+    <Box sx={{ pt: 3, pb: 10 }}>
       {budgets.length === 0 ? (
         <Paper
           elevation={0}
@@ -198,7 +183,7 @@ export const BudgetPage: React.FC = () => {
             const spent = getBudgetSpent(budget);
             const transactionCount = budget.transactionIds?.length || 0;
             const cumulativeBudget = calculateCumulativeBudget(budget);
-            const elapsedPeriods = calculateElapsedPeriods(budget.startDate, budget.period);
+            const elapsedPeriods = calculateElapsedPeriods(budget.startDate, budget.period, budget.rolloverDay);
             const allocatedTxns = transactions.filter(t => budget.transactionIds?.includes(t.id));
 
             return (
@@ -218,12 +203,31 @@ export const BudgetPage: React.FC = () => {
                   onEdit={() => handleEditClick(budget)}
                   onDelete={() => handleDeleteBudget(budget.id)}
                   onManageTransactions={() => handleManageTransactions(budget)}
+                  onTransactionCountClick={() => handleManageTransactions(budget, true)}
                 />
               </Box>
             );
           })}
         </Stack>
       )}
+
+      {/* Floating Action Button */}
+      <Fab
+        color="primary"
+        aria-label="add budget"
+        onClick={() => setDialogOpen(true)}
+        sx={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          backgroundColor: '#14959c',
+          '&:hover': {
+            backgroundColor: '#0d7378',
+          },
+        }}
+      >
+        <AddIcon />
+      </Fab>
 
       <BudgetDialog
         open={dialogOpen}
@@ -239,6 +243,7 @@ export const BudgetPage: React.FC = () => {
           budget={allocatingBudget}
           allTransactions={transactions}
           onSave={handleSaveAllocation}
+          initialFilterAllocated={showAllocatedFilter}
         />
       )}
     </Box>

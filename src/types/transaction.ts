@@ -22,4 +22,5 @@ export interface Budget {
   transactionIds?: string[];
   startingBalance?: number;
   startDate?: string;
+  rolloverDay?: number; // Day of month (1-31) when budget credits are applied
 }

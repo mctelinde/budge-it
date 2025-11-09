@@ -253,7 +253,6 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   return (
     <Box sx={{
       width: '100%',
-      height: 'calc(100vh - 200px)', // Fixed height to ensure footer is always visible
       backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.8)',
       borderRadius: 2,
       boxShadow: theme.palette.mode === 'dark'
@@ -263,6 +262,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
       <DataGrid
         rows={transactions}
         columns={columns}
+        autoHeight
         getRowHeight={() => 'auto'}
         initialState={{
           pagination: {

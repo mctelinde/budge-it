@@ -19,7 +19,7 @@ import {
   Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import { Button } from '@mui/material';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, ReferenceLine, Area } from 'recharts';
 import { Transaction } from '../types/transaction';
 import { generateBudgetLifecycleData } from '../utils/budgetGraphData';
 
@@ -38,6 +38,7 @@ interface BudgetCardProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onManageTransactions?: () => void;
+  onTransactionCountClick?: () => void;
 }
 
 export const BudgetCard: React.FC<BudgetCardProps> = ({
@@ -55,6 +56,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   onEdit,
   onDelete,
   onManageTransactions,
+  onTransactionCountClick,
 }) => {
   const theme = useTheme();
   const [expanded, setExpanded] = React.useState(true);
@@ -144,11 +146,14 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
         <Collapse in={expanded}>
           <Box>
-            {/* Budget Stats */}
+            {/* Budget Stats - Single Row */}
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                gridTemplateColumns: {
+                  xs: '1fr 1fr',
+                  sm: startingBalance !== 0 ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)'
+                },
                 gap: 3,
                 mb: 3,
               }}
@@ -190,34 +195,24 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                   {remaining >= 0 ? '' : '-'}${Math.abs(remaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Typography>
               </Box>
-            </Box>
 
-            {/* Starting Balance Display */}
-            {startingBalance !== 0 && (
-              <Box
-                sx={{
-                  mb: 3,
-                  p: 2,
-                  borderRadius: 2,
-                  backgroundColor: theme.palette.mode === 'dark'
-                    ? 'rgba(255, 255, 255, 0.03)'
-                    : 'rgba(0, 0, 0, 0.02)',
-                }}
-              >
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  Starting Balance
-                </Typography>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 600,
-                    color: startingBalance >= 0 ? '#14959c' : '#d84315',
-                  }}
-                >
-                  {startingBalance >= 0 ? '+' : '-'}${Math.abs(startingBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Typography>
-              </Box>
-            )}
+              {startingBalance !== 0 && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    Starting Balance
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontWeight: 600,
+                      color: startingBalance >= 0 ? '#14959c' : '#d84315',
+                    }}
+                  >
+                    {startingBalance >= 0 ? '+' : '-'}${Math.abs(startingBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
 
             {/* Progress Bar */}
             <Box sx={{ mb: 3 }}>
@@ -256,10 +251,15 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                   <Chip
                     label={`${transactionCount} transaction${transactionCount !== 1 ? 's' : ''}`}
                     size="small"
+                    onClick={onTransactionCountClick}
                     sx={{
                       backgroundColor: '#14959c',
                       color: 'white',
                       fontWeight: 500,
+                      cursor: onTransactionCountClick ? 'pointer' : 'default',
+                      '&:hover': onTransactionCountClick ? {
+                        backgroundColor: '#0d7378',
+                      } : undefined,
                     }}
                   />
                 </Box>
@@ -312,6 +312,14 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                       } as any, allocatedTransactions)}
                       margin={{ top: 5, right: 5, left: -20, bottom: 5 }}
                     >
+                      <defs>
+                        <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset={0} stopColor="#ff6f00" stopOpacity={0.3} />
+                          <stop offset={0.45} stopColor="#ff6f00" stopOpacity={0.05} />
+                          <stop offset={0.55} stopColor="#0d7377" stopOpacity={0.05} />
+                          <stop offset={1} stopColor="#0d7377" stopOpacity={0.3} />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                       <XAxis
                         dataKey="displayDate"
@@ -334,6 +342,11 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                         wrapperStyle={{ fontSize: '12px' }}
                         iconType="circle"
                       />
+                      <ReferenceLine
+                        y={0}
+                        stroke={theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'}
+                        strokeDasharray="3 3"
+                      />
                       <Bar
                         dataKey="credit"
                         fill="#14959c"
@@ -345,6 +358,13 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                         fill="#ff6f00"
                         name="Spent"
                         radius={[4, 4, 0, 0]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="balance"
+                        fill="url(#splitColor)"
+                        stroke="none"
+                        legendType="none"
                       />
                       <Line
                         type="monotone"
