@@ -10,7 +10,13 @@ import {
   useMediaQuery,
   Stack,
   Divider,
+  IconButton,
+  Button,
 } from '@mui/material';
+import {
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+} from '@mui/icons-material';
 import { Transaction } from '../data/mockData';
 
 interface TransactionTableProps {
@@ -140,6 +146,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   );
 
   // Pagination for mobile
+  const totalPages = Math.ceil(sortedTransactions.length / pageSize);
   const paginatedTransactions = sortedTransactions.slice(
     page * pageSize,
     (page + 1) * pageSize
@@ -233,16 +240,43 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
           <Box
             sx={{
               display: 'flex',
-              justifyContent: 'center',
+              justifyContent: 'space-between',
               alignItems: 'center',
-              gap: 2,
               mt: 3,
               mb: 2,
+              p: 2,
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+              borderRadius: 2,
             }}
           >
-            <Typography variant="body2" color="text.secondary">
-              {page * pageSize + 1}-{Math.min((page + 1) * pageSize, sortedTransactions.length)} of {sortedTransactions.length}
-            </Typography>
+            <IconButton
+              onClick={() => setPage(Math.max(0, page - 1))}
+              disabled={page === 0}
+              sx={{
+                color: page === 0 ? 'text.disabled' : '#14959c',
+              }}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+            
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography variant="body2" color="text.secondary">
+                Page {page + 1} of {totalPages}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                ({page * pageSize + 1}-{Math.min((page + 1) * pageSize, sortedTransactions.length)} of {sortedTransactions.length})
+              </Typography>
+            </Stack>
+
+            <IconButton
+              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+              disabled={page >= totalPages - 1}
+              sx={{
+                color: page >= totalPages - 1 ? 'text.disabled' : '#14959c',
+              }}
+            >
+              <ChevronRightIcon />
+            </IconButton>
           </Box>
         )}
       </Box>

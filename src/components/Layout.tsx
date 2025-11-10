@@ -205,6 +205,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
             key={item.text}
             component={Link}
             to={item.path}
+            onClick={() => {
+              // Close mobile drawer when menu item is clicked
+              if (mobileOpen) {
+                setMobileOpen(false);
+              }
+            }}
             sx={{
               color: '#ffffff',
               textDecoration: 'none',
@@ -398,7 +404,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
           <Typography
             variant="h5"
             sx={{
-              fontWeight: 600,
+              fontFamily: '"Righteous", "Inter", sans-serif',
+              fontWeight: 400,
+              letterSpacing: '0.5px',
               color: theme.palette.mode === 'dark' ? '#fff' : '#000',
             }}
           >
