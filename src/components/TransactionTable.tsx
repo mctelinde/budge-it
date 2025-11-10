@@ -258,7 +258,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             >
               <ChevronLeftIcon />
             </IconButton>
-            
+
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography variant="body2" color="text.secondary">
                 Page {page + 1} of {totalPages}
