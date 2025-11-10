@@ -15,7 +15,7 @@ import { Budget, Transaction } from '../types/transaction';
 import { BudgetDialog } from '../components/BudgetDialog';
 import { BudgetCard } from '../components/BudgetCard';
 import { TransactionAllocationDialog } from '../components/TransactionAllocationDialog';
-import { budgetService, transactionService, initializeDatabase } from '../db/services';
+import { budgetService, transactionService } from '../services/database';
 import { calculateCumulativeBudget, calculateElapsedPeriods } from '../utils/budgetCalculations';
 
 export const BudgetPage: React.FC = () => {
@@ -28,11 +28,10 @@ export const BudgetPage: React.FC = () => {
   const [allocatingBudget, setAllocatingBudget] = useState<Budget | undefined>(undefined);
   const [showAllocatedFilter, setShowAllocatedFilter] = useState(false);
 
-  // Load data from IndexedDB on component mount
+  // Load data from Supabase on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
-        await initializeDatabase();
         const [loadedBudgets, loadedTransactions] = await Promise.all([
           budgetService.getAll(),
           transactionService.getAll(),
@@ -186,6 +185,23 @@ export const BudgetPage: React.FC = () => {
             const elapsedPeriods = calculateElapsedPeriods(budget.startDate, budget.period, budget.rolloverDay);
             const allocatedTxns = transactions.filter(t => budget.transactionIds?.includes(t.id));
 
+            // Calculate top expense categories
+            const expensesByCategory = allocatedTxns
+              .filter(t => t.type === 'expense')
+              .reduce((acc, t) => {
+                acc[t.category] = (acc[t.category] || 0) + t.amount;
+                return acc;
+              }, {} as Record<string, number>);
+
+            const topCategories = Object.entries(expensesByCategory)
+              .map(([category, amount]) => ({
+                category,
+                amount,
+                percentage: spent > 0 ? (amount / spent) * 100 : 0,
+              }))
+              .sort((a, b) => b.amount - a.amount)
+              .slice(0, 5);
+
             return (
               <Box key={budget.id}>
                 <BudgetCard
@@ -193,7 +209,7 @@ export const BudgetPage: React.FC = () => {
                   period={budget.period}
                   budgetTotal={budget.amount}
                   spent={spent}
-                  topCategories={[]}
+                  topCategories={topCategories}
                   transactionCount={transactionCount}
                   startingBalance={budget.startingBalance}
                   startDate={budget.startDate}

@@ -24,7 +24,6 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
-import { databaseService } from '../db/services';
 
 export const SettingsPage: React.FC = () => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -60,10 +59,10 @@ export const SettingsPage: React.FC = () => {
   const handleClearData = async () => {
     setClearing(true);
     try {
-      await databaseService.clearAll();
+      // Note: With Supabase, we can't easily clear all data from the client side
+      // This would require server-side logic or manual deletion via Supabase dashboard
+      alert('Data clearing is not yet implemented with Supabase. Please use the Supabase dashboard to manage your data.');
       setConfirmDialogOpen(false);
-      // Reload the page to refresh all data
-      window.location.reload();
     } catch (error) {
       console.error('Failed to clear data:', error);
       alert('Failed to clear data. Please try again.');

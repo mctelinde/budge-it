@@ -20,8 +20,9 @@ import { TransactionTable } from '../components/TransactionTable';
 import { BudgetCard } from '../components/BudgetCard';
 import { TransactionImportDialog } from '../components/TransactionImportDialog';
 import { BudgetDialog } from '../components/BudgetDialog';
+import { BudgetCardCondensed } from '../components/BudgetCardCondensed';
 import { Transaction, Budget } from '../types/transaction';
-import { transactionService, budgetService } from '../db/services';
+import { transactionService, budgetService } from '../services/database';
 import { calculateCumulativeBudget, calculateElapsedPeriods } from '../utils/budgetCalculations';
 
 export const TransactionsPage: React.FC = () => {
@@ -291,16 +292,42 @@ export const TransactionsPage: React.FC = () => {
         </Button>
       </Stack>
 
-      {activeBudget ? (
-        <BudgetCard
-          budgetTotal={activeBudget.amount}
-          spent={totalExpenses}
-          topCategories={topCategories}
-          startingBalance={activeBudget.startingBalance}
-          startDate={activeBudget.startDate}
-          cumulativeBudget={calculateCumulativeBudget(activeBudget)}
-          elapsedPeriods={calculateElapsedPeriods(activeBudget.startDate, activeBudget.period, activeBudget.rolloverDay)}
-        />
+      {budgets.length > 0 ? (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: budgets.length === 1 ? '1fr' : budgets.length === 2 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            },
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          {budgets.slice(0, 3).map((budget) => {
+            const budgetTxns = transactions.filter(t => budget.transactionIds?.includes(t.id));
+            const spent = budgetTxns
+              .filter(t => t.type === 'expense')
+              .reduce((sum, t) => sum + t.amount, 0);
+            const cumulativeBudget = calculateCumulativeBudget(budget);
+            const totalAvailable = (budget.startingBalance || 0) + cumulativeBudget;
+            const remaining = totalAvailable - spent;
+            const percentageUsed = totalAvailable > 0 ? (spent / totalAvailable) * 100 : 0;
+
+            return (
+              <BudgetCardCondensed
+                key={budget.id}
+                title={budget.title}
+                period={budget.period}
+                budgetTotal={budget.amount}
+                spent={spent}
+                remaining={remaining}
+                percentageUsed={percentageUsed}
+                transactionCount={budget.transactionIds?.length || 0}
+              />
+            );
+          })}
+        </Box>
       ) : (
         <Paper
           elevation={0}

@@ -26,8 +26,10 @@ import {
   ChevronRight,
   Settings,
   AccountBalanceWallet,
+  Logout,
 } from '@mui/icons-material';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const DRAWER_WIDTH = 240;
 const COLLAPSED_DRAWER_WIDTH = 72;
@@ -42,6 +44,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
   const [desktopOpen, setDesktopOpen] = React.useState(true);
   const theme = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -293,6 +302,47 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
             <Settings />
           </ListItemIcon>
           {desktopOpen && <ListItemText primary="Settings" />}
+        </ListItem>
+
+        {/* Logout Button */}
+        <ListItem
+          component="div"
+          onClick={handleSignOut}
+          sx={{
+            cursor: 'pointer',
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: '12px',
+            mx: 1.5,
+            mb: 1,
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+                animation: 'shimmer 1.5s infinite',
+              },
+            },
+            '& .MuiListItemIcon-root': {
+              color: '#ffffff',
+              minWidth: desktopOpen ? 40 : 0,
+              zIndex: 1,
+            },
+            '& .MuiListItemText-primary': {
+              color: '#ffffff',
+              zIndex: 1,
+            },
+          }}
+        >
+          <ListItemIcon>
+            <Logout />
+          </ListItemIcon>
+          {desktopOpen && <ListItemText primary="Logout" />}
         </ListItem>
       </Box>
     </Box>
