@@ -61,9 +61,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
   };
 
   const menuItems = [
+    { text: 'Budgets', icon: <AccountBalance />, path: '/app/budget' },
     { text: 'Transactions', icon: <Receipt />, path: '/app/transactions' },
     { text: 'Bills', icon: <Description />, path: '/app/bills' },
-    { text: 'Budgets', icon: <AccountBalance />, path: '/app/budget' },
     { text: 'Spending', icon: <Assessment />, path: '/app/spending' },
   ];
 

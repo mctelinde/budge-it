@@ -23,4 +23,6 @@ export interface Budget {
   startingBalance?: number;
   startDate?: string;
   rolloverDay?: number; // Day of month (1-31) when budget credits are applied
+  pinned?: boolean; // Whether budget is pinned to transactions page
+  displayOrder?: number; // Order for displaying budgets
 }

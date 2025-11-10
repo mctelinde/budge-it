@@ -7,8 +7,9 @@ import {
   LinearProgress,
   useTheme,
   Chip,
+  IconButton,
 } from '@mui/material';
-import { TrendingUp } from '@mui/icons-material';
+import { TrendingUp, PushPin, PushPinOutlined } from '@mui/icons-material';
 
 interface BudgetCardCondensedProps {
   title: string;
@@ -18,6 +19,8 @@ interface BudgetCardCondensedProps {
   remaining: number;
   percentageUsed: number;
   transactionCount: number;
+  pinned?: boolean;
+  onPinToggle?: (e: React.MouseEvent) => void;
   onClick?: () => void;
 }
 
@@ -29,6 +32,8 @@ export const BudgetCardCondensed: React.FC<BudgetCardCondensedProps> = ({
   remaining,
   percentageUsed,
   transactionCount,
+  pinned = false,
+  onPinToggle,
   onClick,
 }) => {
   const theme = useTheme();
@@ -71,10 +76,29 @@ export const BudgetCardCondensed: React.FC<BudgetCardCondensedProps> = ({
     >
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-          <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#14959c', mb: 0.5 }}>
-              {title}
-            </Typography>
+          <Box sx={{ flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#14959c', mb: 0.5 }}>
+                {title}
+              </Typography>
+              {onPinToggle && (
+                <IconButton
+                  size="small"
+                  onClick={onPinToggle}
+                  sx={{
+                    p: 0.5,
+                    color: pinned ? '#14959c' : 'text.secondary',
+                    backgroundColor: pinned ? 'rgba(20, 149, 156, 0.15)' : 'transparent',
+                    '&:hover': {
+                      backgroundColor: pinned ? 'rgba(20, 149, 156, 0.25)' : 'rgba(20, 149, 156, 0.1)',
+                    },
+                  }}
+                  title={pinned ? 'Unpin budget' : 'Pin budget'}
+                >
+                  {pinned ? <PushPin sx={{ fontSize: 16 }} /> : <PushPinOutlined sx={{ fontSize: 16 }} />}
+                </IconButton>
+              )}
+            </Box>
             <Typography variant="caption" color="text.secondary">
               {getPeriodLabel()} • {transactionCount} transaction{transactionCount !== 1 ? 's' : ''}
             </Typography>

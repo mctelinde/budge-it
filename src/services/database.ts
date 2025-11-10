@@ -19,6 +19,7 @@ export const budgetService = {
       .from('budgets')
       .select('*')
       .eq('user_id', user.id)
+      .order('display_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -102,6 +103,8 @@ export const budgetService = {
     if (updates.startingBalance !== undefined) updateData.starting_balance = updates.startingBalance;
     if (updates.startDate !== undefined) updateData.start_date = updates.startDate;
     if (updates.rolloverDay !== undefined) updateData.rollover_day = updates.rolloverDay;
+    if (updates.pinned !== undefined) updateData.pinned = updates.pinned;
+    if (updates.displayOrder !== undefined) updateData.display_order = updates.displayOrder;
 
     const { data, error } = await (supabase
       .from('budgets')
@@ -353,6 +356,8 @@ function mapBudgetFromDb(dbBudget: any): Budget {
     rolloverDay: dbBudget.rollover_day || undefined,
     createdAt: dbBudget.created_at,
     transactionIds: [], // Will be populated when needed
+    pinned: dbBudget.pinned || false,
+    displayOrder: dbBudget.display_order || 0,
   };
 }
 

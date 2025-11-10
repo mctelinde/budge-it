@@ -8,12 +8,16 @@ import {
   Button,
   Stack,
   CircularProgress,
+  Typography,
+  Collapse,
+  IconButton,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   PostAdd as PostAddIcon,
   Upload as UploadIcon,
-  AddCircleOutline as AddCircleOutlineIcon
+  AddCircleOutline as AddCircleOutlineIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { TransactionDialog } from '../components/TransactionDialog';
 import { TransactionTable } from '../components/TransactionTable';
@@ -35,6 +39,7 @@ export const TransactionsPage: React.FC = () => {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
+  const [budgetsExpanded, setBudgetsExpanded] = useState(false);
 
   // Load transactions and budgets from database
   useEffect(() => {
@@ -178,6 +183,42 @@ export const TransactionsPage: React.FC = () => {
     }
   };
 
+  const handlePinToggle = async (budgetId: string, currentPinned: boolean, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    try {
+      // Optimistically update the UI
+      setBudgets(prevBudgets =>
+        prevBudgets.map(b =>
+          b.id === budgetId ? { ...b, pinned: !currentPinned } : b
+        )
+      );
+
+      // Update in database
+      await budgetService.update(budgetId, { pinned: !currentPinned });
+
+      // Refresh from database to ensure sync
+      await refreshData();
+    } catch (error) {
+      console.error('Failed to toggle pin:', error);
+      // Revert optimistic update on error
+      await refreshData();
+    }
+  };
+
+  // Sort budgets: pinned first, then unpinned
+  const sortedBudgets = [...budgets].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return 0;
+  });
+
+  // Get pinned and unpinned budgets
+  const pinnedBudgets = sortedBudgets.filter(b => b.pinned);
+  const unpinnedBudgets = sortedBudgets.filter(b => !b.pinned);
+
+  // Budgets to display: pinned always, unpinned only when expanded
+  const displayedBudgets = budgetsExpanded ? sortedBudgets : pinnedBudgets;
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -193,7 +234,153 @@ export const TransactionsPage: React.FC = () => {
         p: 0,
         backgroundColor: 'transparent',
       }}>
-      <Stack direction="row" spacing={1.5} sx={{ mb: 2.5, mt: 2 }}>
+      {/* Budgets Section */}
+      {budgets.length > 0 && (
+        <Box sx={{ mb: 2, mt: 4 }}>
+          <Box
+            onClick={() => unpinnedBudgets.length > 0 && setBudgetsExpanded(!budgetsExpanded)}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              mb: 2,
+              cursor: unpinnedBudgets.length > 0 ? 'pointer' : 'default',
+              p: 1.5,
+              borderRadius: 2,
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(20, 149, 156, 0.08)' : 'rgba(20, 149, 156, 0.05)',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(20, 149, 156, 0.2)' : 'rgba(20, 149, 156, 0.15)'}`,
+              transition: 'all 0.2s ease',
+              '&:hover': unpinnedBudgets.length > 0 ? {
+                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(20, 149, 156, 0.12)' : 'rgba(20, 149, 156, 0.08)',
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(20, 149, 156, 0.3)' : 'rgba(20, 149, 156, 0.25)',
+              } : {},
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 600, color: '#14959c' }}>
+              {!budgetsExpanded && pinnedBudgets.length > 0 ? `Pinned Budgets (${pinnedBudgets.length})` : 'Budgets'}
+            </Typography>
+            {unpinnedBudgets.length > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
+                  {budgetsExpanded ? 'Show less' : `Show ${unpinnedBudgets.length} more`}
+                </Typography>
+                <ExpandMoreIcon
+                  sx={{
+                    transform: budgetsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.3s',
+                    color: '#14959c',
+                  }}
+                />
+              </Box>
+            )}
+          </Box>
+          {displayedBudgets.length > 0 && (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: displayedBudgets.length === 1 ? '1fr' : displayedBudgets.length === 2 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+                },
+                gap: 2,
+                mt: 2,
+                transition: 'grid-template-columns 0.3s ease-in-out',
+                '& > *': {
+                  transition: 'all 0.3s ease-in-out',
+                },
+              }}
+            >
+              {displayedBudgets.map((budget) => {
+              const budgetTxns = transactions.filter(t => budget.transactionIds?.includes(t.id));
+              const spent = budgetTxns
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+              const cumulativeBudget = calculateCumulativeBudget(budget);
+              const totalAvailable = (budget.startingBalance || 0) + cumulativeBudget;
+              const remaining = totalAvailable - spent;
+              const percentageUsed = totalAvailable > 0 ? (spent / totalAvailable) * 100 : 0;
+
+              return (
+                <Box
+                  key={budget.id}
+                  sx={{
+                    animation: 'fadeIn 0.3s ease-in-out',
+                    '@keyframes fadeIn': {
+                      from: {
+                        opacity: 0,
+                        transform: 'scale(0.95)',
+                      },
+                      to: {
+                        opacity: 1,
+                        transform: 'scale(1)',
+                      },
+                    },
+                  }}
+                >
+                  <BudgetCardCondensed
+                    title={budget.title}
+                    period={budget.period}
+                    budgetTotal={budget.amount}
+                    spent={spent}
+                    remaining={remaining}
+                    percentageUsed={percentageUsed}
+                    transactionCount={budget.transactionIds?.length || 0}
+                    pinned={budget.pinned}
+                    onPinToggle={(e) => handlePinToggle(budget.id, budget.pinned || false, e)}
+                  />
+                </Box>
+              );
+            })}
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {/* No Budgets Message */}
+      {budgets.length === 0 && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            mt: 4,
+            mb: 3,
+            borderRadius: 3,
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+            textAlign: 'center',
+          }}
+        >
+          <Box sx={{ mb: 2 }}>
+            <AddCircleOutlineIcon
+              sx={{
+                fontSize: 60,
+                color: theme.palette.text.secondary,
+                opacity: 0.5,
+              }}
+            />
+          </Box>
+          <Box sx={{ mb: 2, color: theme.palette.text.secondary }}>
+            No budget configured. Create a budget to track your spending.
+          </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setBudgetDialogOpen(true)}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              px: 3,
+              background: theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
+                : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
+            }}
+          >
+            Create Budget
+          </Button>
+        </Paper>
+      )}
+
+      {/* Search and Action Buttons */}
+      <Stack direction="row" spacing={1.5} sx={{ mb: 2.5 }}>
         <TextField
           fullWidth
           variant="outlined"
@@ -291,83 +478,6 @@ export const TransactionsPage: React.FC = () => {
           }} />
         </Button>
       </Stack>
-
-      {budgets.length > 0 ? (
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: budgets.length === 1 ? '1fr' : budgets.length === 2 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-            },
-            gap: 2,
-            mb: 3,
-          }}
-        >
-          {budgets.slice(0, 3).map((budget) => {
-            const budgetTxns = transactions.filter(t => budget.transactionIds?.includes(t.id));
-            const spent = budgetTxns
-              .filter(t => t.type === 'expense')
-              .reduce((sum, t) => sum + t.amount, 0);
-            const cumulativeBudget = calculateCumulativeBudget(budget);
-            const totalAvailable = (budget.startingBalance || 0) + cumulativeBudget;
-            const remaining = totalAvailable - spent;
-            const percentageUsed = totalAvailable > 0 ? (spent / totalAvailable) * 100 : 0;
-
-            return (
-              <BudgetCardCondensed
-                key={budget.id}
-                title={budget.title}
-                period={budget.period}
-                budgetTotal={budget.amount}
-                spent={spent}
-                remaining={remaining}
-                percentageUsed={percentageUsed}
-                transactionCount={budget.transactionIds?.length || 0}
-              />
-            );
-          })}
-        </Box>
-      ) : (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 4,
-            mb: 3,
-            borderRadius: 3,
-            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-            textAlign: 'center',
-          }}
-        >
-          <Box sx={{ mb: 2 }}>
-            <AddCircleOutlineIcon
-              sx={{
-                fontSize: 60,
-                color: theme.palette.text.secondary,
-                opacity: 0.5,
-              }}
-            />
-          </Box>
-          <Box sx={{ mb: 2, color: theme.palette.text.secondary }}>
-            No budget configured. Create a budget to track your spending.
-          </Box>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setBudgetDialogOpen(true)}
-            sx={{
-              borderRadius: 2,
-              textTransform: 'none',
-              px: 3,
-              background: theme.palette.mode === 'dark'
-                ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
-                : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
-            }}
-          >
-            Create Budget
-          </Button>
-        </Paper>
-      )}
 
       <TransactionTable
         transactions={filteredTransactions}

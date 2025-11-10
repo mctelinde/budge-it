@@ -27,6 +27,7 @@ export const BudgetPage: React.FC = () => {
   const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
   const [allocatingBudget, setAllocatingBudget] = useState<Budget | undefined>(undefined);
   const [showAllocatedFilter, setShowAllocatedFilter] = useState(false);
+  const [draggedBudgetId, setDraggedBudgetId] = useState<string | null>(null);
 
   // Load data from Supabase on component mount
   useEffect(() => {
@@ -133,6 +134,70 @@ export const BudgetPage: React.FC = () => {
       .reduce((sum, t) => sum + t.amount, 0);
   };
 
+  // Drag and drop handlers
+  const handleDragStart = (budgetId: string) => {
+    setDraggedBudgetId(budgetId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (targetBudgetId: string) => {
+    if (!draggedBudgetId || draggedBudgetId === targetBudgetId) {
+      setDraggedBudgetId(null);
+      return;
+    }
+
+    try {
+      // Get current order - initialize display order based on current array position if not set
+      const sortedBudgets = [...budgets].sort((a, b) => {
+        const orderA = a.displayOrder ?? budgets.indexOf(a);
+        const orderB = b.displayOrder ?? budgets.indexOf(b);
+        return orderA - orderB;
+      });
+
+      const draggedIndex = sortedBudgets.findIndex(b => b.id === draggedBudgetId);
+      const targetIndex = sortedBudgets.findIndex(b => b.id === targetBudgetId);
+
+      if (draggedIndex === -1 || targetIndex === -1) return;
+
+      // Reorder array
+      const reorderedBudgets = [...sortedBudgets];
+      const [draggedBudget] = reorderedBudgets.splice(draggedIndex, 1);
+      reorderedBudgets.splice(targetIndex, 0, draggedBudget);
+
+      // Update display order for all budgets with new values
+      const updatedBudgets = reorderedBudgets.map((budget, index) => ({
+        ...budget,
+        displayOrder: index
+      }));
+
+      // Optimistically update UI
+      setBudgets(updatedBudgets);
+
+      // Update in database
+      const updatePromises = updatedBudgets.map((budget) =>
+        budgetService.update(budget.id, { displayOrder: budget.displayOrder })
+      );
+
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error('Failed to reorder budgets:', error);
+      // Refresh from database on error
+      await refreshBudgets();
+    } finally {
+      setDraggedBudgetId(null);
+    }
+  };
+
+  // Sort budgets by display order (use array index as fallback)
+  const sortedBudgets = [...budgets].sort((a, b) => {
+    const orderA = a.displayOrder ?? budgets.indexOf(a);
+    const orderB = b.displayOrder ?? budgets.indexOf(b);
+    return orderA - orderB;
+  });
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -178,7 +243,7 @@ export const BudgetPage: React.FC = () => {
         </Paper>
       ) : (
         <Stack spacing={3}>
-          {budgets.map((budget) => {
+          {sortedBudgets.map((budget) => {
             const spent = getBudgetSpent(budget);
             const transactionCount = budget.transactionIds?.length || 0;
             const cumulativeBudget = calculateCumulativeBudget(budget);
@@ -203,7 +268,21 @@ export const BudgetPage: React.FC = () => {
               .slice(0, 5);
 
             return (
-              <Box key={budget.id}>
+              <Box
+                key={budget.id}
+                draggable
+                onDragStart={() => handleDragStart(budget.id)}
+                onDragOver={handleDragOver}
+                onDrop={() => handleDrop(budget.id)}
+                sx={{
+                  cursor: 'grab',
+                  opacity: draggedBudgetId === budget.id ? 0.5 : 1,
+                  transition: 'opacity 0.2s',
+                  '&:active': {
+                    cursor: 'grabbing',
+                  },
+                }}
+              >
                 <BudgetCard
                   title={budget.title}
                   period={budget.period}
