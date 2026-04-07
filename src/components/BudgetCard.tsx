@@ -342,7 +342,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                           border: '1px solid #14959c',
                           borderRadius: 8,
                         }}
-                        formatter={(value: number) => `$${value.toFixed(2)}`}
+                        formatter={(value) => typeof value === 'number' ? `$${value.toFixed(2)}` : ''}
                       />
                       <Legend
                         wrapperStyle={{ fontSize: '12px' }}
