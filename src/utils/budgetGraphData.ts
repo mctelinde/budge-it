@@ -47,34 +47,38 @@ export const generateBudgetLifecycleData = (
     currentRollover = new Date(currentRollover.getFullYear(), nextMonth, rolloverDay);
   }
 
-  // Group transactions by rollover period
-  const transactionsByPeriod = new Map<string, number>();
+  // Group non-installment transactions by rollover period
+  const installmentTxnIds = new Set(
+    (budget.installmentPlans || []).map((p) => p.transactionId)
+  );
+  const transactionsByPeriod = new Map<string, { debit: number; credit: number }>();
 
-  allocatedTransactions.forEach((txn) => {
-    if (txn.type === 'expense') {
-      const txnDate = new Date(txn.date);
+  allocatedTransactions
+    .filter((txn) => !installmentTxnIds.has(txn.id))
+    .forEach((txn) => {
+    const txnDate = new Date(txn.date);
 
-      // Find which rollover period this transaction belongs to
-      let periodKey = 'before-start';
-      for (let i = 0; i < rolloverDates.length; i++) {
-        const currentPeriod = rolloverDates[i];
-        const nextPeriod = i < rolloverDates.length - 1 ? rolloverDates[i + 1] : today;
+    // Find which rollover period this transaction belongs to
+    let periodKey = 'before-start';
+    for (let i = 0; i < rolloverDates.length; i++) {
+      const currentPeriod = rolloverDates[i];
+      const nextPeriod = i < rolloverDates.length - 1 ? rolloverDates[i + 1] : today;
 
-        if (txnDate >= currentPeriod && txnDate < nextPeriod) {
-          periodKey = currentPeriod.toISOString().split('T')[0];
-          break;
-        } else if (i === rolloverDates.length - 1 && txnDate >= currentPeriod) {
-          // After last rollover date
-          periodKey = currentPeriod.toISOString().split('T')[0];
-          break;
-        }
+      if (txnDate >= currentPeriod && txnDate < nextPeriod) {
+        periodKey = currentPeriod.toISOString().split('T')[0];
+        break;
+      } else if (i === rolloverDates.length - 1 && txnDate >= currentPeriod) {
+        periodKey = currentPeriod.toISOString().split('T')[0];
+        break;
       }
+    }
 
-      if (periodKey !== 'before-start') {
-        transactionsByPeriod.set(
-          periodKey,
-          (transactionsByPeriod.get(periodKey) || 0) + txn.amount
-        );
+    if (periodKey !== 'before-start') {
+      const existing = transactionsByPeriod.get(periodKey) || { debit: 0, credit: 0 };
+      if (txn.type === 'expense') {
+        transactionsByPeriod.set(periodKey, { ...existing, debit: existing.debit + txn.amount });
+      } else if (txn.type === 'income') {
+        transactionsByPeriod.set(periodKey, { ...existing, credit: existing.credit + txn.amount });
       }
     }
   });
@@ -85,10 +89,25 @@ export const generateBudgetLifecycleData = (
   let cumulativeCredit = 0;
   let cumulativeDebit = 0;
 
-  const dataPoints: BudgetLifecycleDataPoint[] = rolloverDates.map((rolloverDate) => {
+  // Pre-compute installment debit per period index
+  const installmentDebitByIndex = new Array(rolloverDates.length).fill(0);
+  for (const plan of (budget.installmentPlans || [])) {
+    const startIdx = rolloverDates.findIndex(
+      (d) => d.toISOString().split('T')[0] === plan.startPeriodDate
+    );
+    if (startIdx !== -1) {
+      const endIdx = Math.min(startIdx + plan.numInstallments, rolloverDates.length);
+      for (let i = startIdx; i < endIdx; i++) {
+        installmentDebitByIndex[i] += plan.amountPerInstallment;
+      }
+    }
+  }
+
+  const dataPoints: BudgetLifecycleDataPoint[] = rolloverDates.map((rolloverDate, periodIndex) => {
     const dateKey = rolloverDate.toISOString().split('T')[0];
-    const periodDebit = transactionsByPeriod.get(dateKey) || 0;
-    const periodCredit = budget.amount; // Budget amount added each rollover
+    const period = transactionsByPeriod.get(dateKey) || { debit: 0, credit: 0 };
+    const periodDebit = period.debit + installmentDebitByIndex[periodIndex];
+    const periodCredit = budget.amount + period.credit; // Budget allocation + any income credits
 
     cumulativeCredit += periodCredit;
     cumulativeDebit += periodDebit;

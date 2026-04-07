@@ -20,7 +20,7 @@ import {
 } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, ReferenceLine, Area } from 'recharts';
-import { Transaction } from '../types/transaction';
+import { Transaction, InstallmentPlan } from '../types/transaction';
 import { generateBudgetLifecycleData } from '../utils/budgetGraphData';
 
 interface BudgetCardProps {
@@ -35,6 +35,8 @@ interface BudgetCardProps {
   cumulativeBudget?: number; // Total budget accumulated over time
   elapsedPeriods?: number; // Number of periods that have passed
   allocatedTransactions?: Transaction[]; // Transactions allocated to this budget
+  rolloverDay?: number;
+  installmentPlans?: InstallmentPlan[];
   onEdit?: () => void;
   onDelete?: () => void;
   onManageTransactions?: () => void;
@@ -53,6 +55,8 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   cumulativeBudget,
   elapsedPeriods,
   allocatedTransactions = [],
+  rolloverDay,
+  installmentPlans = [],
   onEdit,
   onDelete,
   onManageTransactions,
@@ -308,7 +312,9 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                         period,
                         createdAt: '',
                         startDate,
-                        startingBalance
+                        startingBalance,
+                        rolloverDay,
+                        installmentPlans,
                       } as any, allocatedTransactions)}
                       margin={{ top: 5, right: 5, left: -20, bottom: 5 }}
                     >

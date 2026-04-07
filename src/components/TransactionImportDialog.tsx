@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import { Transaction } from '../types/transaction';
 import { importChaseCSV, importPayPalCSV, importTFCUCSV, detectDuplicates } from '../utils/csvImport';
+import { decodeHtmlEntities } from '../utils/textUtils';
 import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 
 interface TransactionImportDialogProps {
@@ -251,7 +252,7 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
                   primary={
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {txn.description}
+                        {decodeHtmlEntities(txn.description)}
                       </Typography>
                       <Typography
                         variant="body2"

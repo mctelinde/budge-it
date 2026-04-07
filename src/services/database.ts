@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Budget, Transaction } from '../types/transaction';
+import { Budget, Transaction, InstallmentPlan } from '../types/transaction';
 
 /**
  * Database service layer for Supabase operations
@@ -24,7 +24,7 @@ export const budgetService = {
 
     if (error) throw error;
 
-    // Fetch transaction IDs for each budget
+    // Fetch transaction IDs and installment plans for each budget
     const budgets = (data || []).map(mapBudgetFromDb);
 
     for (const budget of budgets) {
@@ -35,6 +35,14 @@ export const budgetService = {
         .eq('budget_id', budget.id);
 
       budget.transactionIds = (txnData || []).map((t: any) => t.id);
+
+      const { data: planData } = await supabase
+        .from('installment_plans')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('budget_id', budget.id);
+
+      budget.installmentPlans = (planData || []).map(mapInstallmentPlanFromDb);
     }
 
     return budgets;
@@ -131,13 +139,25 @@ export const budgetService = {
   },
 
   /**
-   * Allocate transactions to a budget
-   * Updates the budget_id field on specified transactions
+   * Allocate transactions to a budget.
+   * Updates the budget_id field on specified transactions and removes
+   * installment plans for any transactions that are being unallocated.
    */
   async allocateTransactions(budgetId: string, transactionIds: string[]): Promise<void> {
     const user = await getCurrentUser();
 
-    // First, clear any existing allocations for this budget
+    // Find transactions currently allocated to this budget so we can
+    // clean up installment plans for any that are being removed.
+    const { data: currentlyAllocated } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('budget_id', budgetId);
+
+    const currentIds = (currentlyAllocated || []).map((t: any) => t.id as string);
+    const removedIds = currentIds.filter((id) => !transactionIds.includes(id));
+
+    // Clear any existing allocations for this budget
     const { error: clearError } = await (supabase
       .from('transactions')
       .update as any)({ budget_id: null })
@@ -146,7 +166,16 @@ export const budgetService = {
 
     if (clearError) throw clearError;
 
-    // Then, allocate the new transactions to this budget
+    // Remove installment plans for transactions no longer allocated
+    if (removedIds.length > 0) {
+      await supabase
+        .from('installment_plans')
+        .delete()
+        .eq('user_id', user.id)
+        .in('transaction_id', removedIds);
+    }
+
+    // Allocate the new set of transactions to this budget
     if (transactionIds.length > 0) {
       const { error: allocateError } = await (supabase
         .from('transactions')
@@ -378,6 +407,85 @@ function mapTransactionFromDb(dbTxn: any): Transaction {
     status: dbTxn.status,
   };
 }
+
+// ==================== INSTALLMENT PLANS ====================
+
+/**
+ * Map database installment plan to app InstallmentPlan type
+ */
+function mapInstallmentPlanFromDb(dbPlan: any): InstallmentPlan {
+  return {
+    id: dbPlan.id,
+    transactionId: dbPlan.transaction_id,
+    budgetId: dbPlan.budget_id,
+    numInstallments: Number(dbPlan.num_installments),
+    amountPerInstallment: Number(dbPlan.amount_per_installment),
+    startPeriodDate: dbPlan.start_period_date,
+    createdAt: dbPlan.created_at,
+  };
+}
+
+export const installmentPlanService = {
+  /**
+   * Create a new installment plan for a transaction.
+   * If a plan already exists for this transaction it is replaced.
+   */
+  async create(plan: {
+    budgetId: string;
+    transactionId: string;
+    numInstallments: number;
+    amountPerInstallment: number;
+    startPeriodDate: string;
+  }): Promise<InstallmentPlan> {
+    const user = await getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('installment_plans')
+      .upsert([{
+        user_id: user.id,
+        transaction_id: plan.transactionId,
+        budget_id: plan.budgetId,
+        num_installments: plan.numInstallments,
+        amount_per_installment: plan.amountPerInstallment,
+        start_period_date: plan.startPeriodDate,
+      }] as any, { onConflict: 'transaction_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return mapInstallmentPlanFromDb(data);
+  },
+
+  /**
+   * Get all installment plans for a given budget
+   */
+  async getForBudget(budgetId: string): Promise<InstallmentPlan[]> {
+    const user = await getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('installment_plans')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('budget_id', budgetId);
+
+    if (error) throw error;
+
+    return (data || []).map(mapInstallmentPlanFromDb);
+  },
+
+  /**
+   * Remove an installment plan, restoring the transaction to full-amount counting
+   */
+  async remove(planId: string): Promise<void> {
+    const { error } = await supabase
+      .from('installment_plans')
+      .delete()
+      .eq('id', planId);
+
+    if (error) throw error;
+  },
+};
 
 // ==================== CATEGORY SERVICE ====================
 

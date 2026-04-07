@@ -15,8 +15,8 @@ import { Budget, Transaction } from '../types/transaction';
 import { BudgetDialog } from '../components/BudgetDialog';
 import { BudgetCard } from '../components/BudgetCard';
 import { TransactionAllocationDialog } from '../components/TransactionAllocationDialog';
-import { budgetService, transactionService } from '../services/database';
-import { calculateCumulativeBudget, calculateElapsedPeriods } from '../utils/budgetCalculations';
+import { budgetService, transactionService, installmentPlanService } from '../services/database';
+import { calculateCumulativeBudget, calculateElapsedPeriods, calculateInstallmentSpent } from '../utils/budgetCalculations';
 
 export const BudgetPage: React.FC = () => {
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -49,10 +49,14 @@ export const BudgetPage: React.FC = () => {
     loadData();
   }, []);
 
-  // Refresh budgets from database
+  // Refresh budgets from database, keeping allocatingBudget in sync if dialog is open
   const refreshBudgets = async () => {
     const loadedBudgets = await budgetService.getAll();
     setBudgets(loadedBudgets);
+    setAllocatingBudget((prev) => {
+      if (!prev) return prev;
+      return loadedBudgets.find((b) => b.id === prev.id) ?? prev;
+    });
   };
 
   // Refresh transactions from database
@@ -124,14 +128,66 @@ export const BudgetPage: React.FC = () => {
     }
   };
 
-  // Calculate spent amount for each budget based on allocated transactions
+  // Calculate net spent for each budget: expenses minus credits, with installment plans
+  // spreading a transaction's cost across multiple rollover periods.
   const getBudgetSpent = (budget: Budget): number => {
     if (!budget.transactionIds || budget.transactionIds.length === 0) {
       return 0;
     }
-    return transactions
-      .filter((t) => budget.transactionIds?.includes(t.id) && t.type === 'expense')
+
+    // Transactions on installment plans are excluded from direct counting
+    const installmentTxnIds = new Set(
+      (budget.installmentPlans || []).map((p) => p.transactionId)
+    );
+
+    const directTransactions = transactions.filter(
+      (t) => budget.transactionIds?.includes(t.id) && !installmentTxnIds.has(t.id)
+    );
+
+    const expenses = directTransactions
+      .filter((t) => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
+
+    const credits = directTransactions
+      .filter((t) => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const installmentSpent = (budget.installmentPlans || []).reduce(
+      (sum, plan) => sum + calculateInstallmentSpent(plan, budget.period, budget.rolloverDay),
+      0
+    );
+
+    return expenses - credits + installmentSpent;
+  };
+
+  const handleInstallmentSave = async (
+    transactionId: string,
+    numInstallments: number,
+    amountPerInstallment: number,
+    startPeriodDate: string
+  ) => {
+    if (!allocatingBudget) return;
+    try {
+      await installmentPlanService.create({
+        budgetId: allocatingBudget.id,
+        transactionId,
+        numInstallments,
+        amountPerInstallment,
+        startPeriodDate,
+      });
+      await refreshBudgets();
+    } catch (error) {
+      console.error('Failed to save installment plan:', error);
+    }
+  };
+
+  const handleInstallmentRemove = async (planId: string) => {
+    try {
+      await installmentPlanService.remove(planId);
+      await refreshBudgets();
+    } catch (error) {
+      console.error('Failed to remove installment plan:', error);
+    }
   };
 
   // Drag and drop handlers
@@ -295,6 +351,8 @@ export const BudgetPage: React.FC = () => {
                   cumulativeBudget={cumulativeBudget}
                   elapsedPeriods={elapsedPeriods}
                   allocatedTransactions={allocatedTxns}
+                  rolloverDay={budget.rolloverDay}
+                  installmentPlans={budget.installmentPlans}
                   onEdit={() => handleEditClick(budget)}
                   onDelete={() => handleDeleteBudget(budget.id)}
                   onManageTransactions={() => handleManageTransactions(budget)}
@@ -339,6 +397,9 @@ export const BudgetPage: React.FC = () => {
           allTransactions={transactions}
           onSave={handleSaveAllocation}
           initialFilterAllocated={showAllocatedFilter}
+          installmentPlans={allocatingBudget.installmentPlans}
+          onInstallmentSave={handleInstallmentSave}
+          onInstallmentRemove={handleInstallmentRemove}
         />
       )}
     </Box>

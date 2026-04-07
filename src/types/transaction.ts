@@ -1,3 +1,14 @@
+export interface InstallmentPlan {
+  id: string;
+  transactionId: string;
+  budgetId: string;
+  numInstallments: number;
+  amountPerInstallment: number;
+  /** ISO date string — rollover date of the first budget period with an installment due */
+  startPeriodDate: string;
+  createdAt: string;
+}
+
 export interface Transaction {
   id: string;
   date: string;
@@ -25,4 +36,5 @@ export interface Budget {
   rolloverDay?: number; // Day of month (1-31) when budget credits are applied
   pinned?: boolean; // Whether budget is pinned to transactions page
   displayOrder?: number; // Order for displaying budgets
+  installmentPlans?: InstallmentPlan[];
 }

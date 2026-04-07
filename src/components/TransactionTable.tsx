@@ -18,6 +18,7 @@ import {
   ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
 import { Transaction } from '../data/mockData';
+import { decodeHtmlEntities } from '../utils/textUtils';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -65,7 +66,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             {/* Header: Description and Amount */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, flex: 1, pr: 1 }}>
-                {transaction.description}
+                {decodeHtmlEntities(transaction.description)}
               </Typography>
               <Typography
                 variant="h6"
@@ -170,6 +171,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
       field: 'description',
       headerName: 'Description',
       flex: 2,
+      renderCell: (params) => decodeHtmlEntities(params.value as string),
     },
     {
       field: 'amount',

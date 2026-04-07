@@ -11,6 +11,7 @@ import {
   Typography,
   Collapse,
   IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -27,7 +28,7 @@ import { BudgetDialog } from '../components/BudgetDialog';
 import { BudgetCardCondensed } from '../components/BudgetCardCondensed';
 import { Transaction, Budget } from '../types/transaction';
 import { transactionService, budgetService } from '../services/database';
-import { calculateCumulativeBudget, calculateElapsedPeriods } from '../utils/budgetCalculations';
+import { calculateCumulativeBudget, calculateElapsedPeriods, calculateInstallmentSpent } from '../utils/budgetCalculations';
 
 export const TransactionsPage: React.FC = () => {
   const theme = useTheme();
@@ -291,10 +292,23 @@ export const TransactionsPage: React.FC = () => {
               }}
             >
               {displayedBudgets.map((budget) => {
-              const budgetTxns = transactions.filter(t => budget.transactionIds?.includes(t.id));
-              const spent = budgetTxns
+              const installmentTxnIds = new Set(
+                (budget.installmentPlans || []).map((p) => p.transactionId)
+              );
+              const budgetTxns = transactions.filter(
+                t => budget.transactionIds?.includes(t.id) && !installmentTxnIds.has(t.id)
+              );
+              const expenses = budgetTxns
                 .filter(t => t.type === 'expense')
                 .reduce((sum, t) => sum + t.amount, 0);
+              const credits = budgetTxns
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + t.amount, 0);
+              const installmentSpent = (budget.installmentPlans || []).reduce(
+                (sum, plan) => sum + calculateInstallmentSpent(plan, budget.period, budget.rolloverDay),
+                0
+              );
+              const spent = expenses - credits + installmentSpent;
               const cumulativeBudget = calculateCumulativeBudget(budget);
               const totalAvailable = (budget.startingBalance || 0) + cumulativeBudget;
               const remaining = totalAvailable - spent;
@@ -410,73 +424,77 @@ export const TransactionsPage: React.FC = () => {
             ),
           }}
         />
-        <Button
-          variant="outlined"
-          color="primary"
-          onClick={() => setImportDialogOpen(true)}
-          sx={{
-            minWidth: '56px',
-            width: '56px',
-            height: '56px',
-            p: 0,
-            borderRadius: 2,
-            borderColor: theme.palette.mode === 'dark' ? '#14959c' : '#0d7377',
-            color: theme.palette.mode === 'dark' ? '#14959c' : '#0d7377',
-            transition: theme.transitions.create(['background', 'transform', 'border-color'], {
-              duration: theme.transitions.duration.short,
-            }),
-            '&:hover': {
-              borderColor: theme.palette.mode === 'dark' ? '#1fb5bc' : '#14959c',
-              backgroundColor: theme.palette.mode === 'dark'
-                ? 'rgba(20, 149, 156, 0.08)'
-                : 'rgba(13, 115, 119, 0.04)',
-              transform: 'scale(1.05)',
-            },
-            '&:active': {
-              transform: 'scale(0.98)',
-            }
-          }}
-        >
-          <UploadIcon sx={{
-            fontSize: 28,
-            color: theme.palette.mode === 'dark' ? '#14959c' : '#0d7377',
-          }} />
-        </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleAddTransaction}
-          sx={{
-            minWidth: '56px',
-            width: '56px',
-            height: '56px',
-            p: 0,
-            borderRadius: 2,
-            background: theme.palette.mode === 'dark'
-              ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
-              : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
-            transition: theme.transitions.create(['background', 'transform', 'box-shadow'], {
-              duration: theme.transitions.duration.short,
-            }),
-            '&:hover': {
+        <Tooltip title="Import transactions from CSV" placement="top" arrow>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => setImportDialogOpen(true)}
+            sx={{
+              minWidth: '56px',
+              width: '56px',
+              height: '56px',
+              p: 0,
+              borderRadius: 2,
+              borderColor: theme.palette.mode === 'dark' ? '#14959c' : '#0d7377',
+              color: theme.palette.mode === 'dark' ? '#14959c' : '#0d7377',
+              transition: theme.transitions.create(['background', 'transform', 'border-color'], {
+                duration: theme.transitions.duration.short,
+              }),
+              '&:hover': {
+                borderColor: theme.palette.mode === 'dark' ? '#1fb5bc' : '#14959c',
+                backgroundColor: theme.palette.mode === 'dark'
+                  ? 'rgba(20, 149, 156, 0.08)'
+                  : 'rgba(13, 115, 119, 0.04)',
+                transform: 'scale(1.05)',
+              },
+              '&:active': {
+                transform: 'scale(0.98)',
+              }
+            }}
+          >
+            <UploadIcon sx={{
+              fontSize: 28,
+              color: theme.palette.mode === 'dark' ? '#14959c' : '#0d7377',
+            }} />
+          </Button>
+        </Tooltip>
+        <Tooltip title="Add a new transaction" placement="top" arrow>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleAddTransaction}
+            sx={{
+              minWidth: '56px',
+              width: '56px',
+              height: '56px',
+              p: 0,
+              borderRadius: 2,
               background: theme.palette.mode === 'dark'
-                ? 'linear-gradient(135deg, #0a5c5f 0%, #107a80 100%)'
-                : 'linear-gradient(135deg, #107a80 0%, #1aa3a9 100%)',
-              transform: 'scale(1.05)',
-              boxShadow: theme.palette.mode === 'dark'
-                ? '0 8px 16px rgba(13, 115, 119, 0.4)'
-                : '0 8px 16px rgba(20, 149, 156, 0.3)',
-            },
-            '&:active': {
-              transform: 'scale(0.98)',
-            }
-          }}
-        >
-          <PostAddIcon sx={{
-            fontSize: 28,
-            color: '#ffffff',
-          }} />
-        </Button>
+                ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
+                : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
+              transition: theme.transitions.create(['background', 'transform', 'box-shadow'], {
+                duration: theme.transitions.duration.short,
+              }),
+              '&:hover': {
+                background: theme.palette.mode === 'dark'
+                  ? 'linear-gradient(135deg, #0a5c5f 0%, #107a80 100%)'
+                  : 'linear-gradient(135deg, #107a80 0%, #1aa3a9 100%)',
+                transform: 'scale(1.05)',
+                boxShadow: theme.palette.mode === 'dark'
+                  ? '0 8px 16px rgba(13, 115, 119, 0.4)'
+                  : '0 8px 16px rgba(20, 149, 156, 0.3)',
+              },
+              '&:active': {
+                transform: 'scale(0.98)',
+              }
+            }}
+          >
+            <PostAddIcon sx={{
+              fontSize: 28,
+              color: '#ffffff',
+            }} />
+          </Button>
+        </Tooltip>
       </Stack>
 
       <TransactionTable

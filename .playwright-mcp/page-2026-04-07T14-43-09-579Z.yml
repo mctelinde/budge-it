@@ -1,0 +1,23 @@
+- generic [ref=e5]:
+  - heading "budge-it" [level=4] [ref=e6]
+  - tablist [ref=e9]:
+    - tab "Sign In" [selected] [ref=e10] [cursor=pointer]
+    - tab "Sign Up" [ref=e11] [cursor=pointer]
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - generic:
+        - text: Email
+        - generic: "*"
+      - generic [ref=e15]:
+        - textbox "Email" [ref=e16]
+        - group:
+          - generic: Email *
+    - generic [ref=e17]:
+      - generic:
+        - text: Password
+        - generic: "*"
+      - generic [ref=e18]:
+        - textbox "Password" [ref=e19]
+        - group:
+          - generic: Password *
+    - button "Sign In" [ref=e20] [cursor=pointer]

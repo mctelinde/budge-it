@@ -1,4 +1,4 @@
-import { Budget } from '../types/transaction';
+import { Budget, InstallmentPlan } from '../types/transaction';
 
 /**
  * Calculate how many budget periods have elapsed based on rollover day
@@ -115,4 +115,19 @@ export const calculateRemaining = (
 ): number => {
   const totalAvailable = calculateTotalAvailable(budget);
   return totalAvailable - spent;
+};
+
+/**
+ * Calculate how much of an installment plan has been spent to date.
+ * Counts elapsed rollover periods since the plan's start period date,
+ * capped at numInstallments, and multiplies by the per-installment amount.
+ */
+export const calculateInstallmentSpent = (
+  plan: InstallmentPlan,
+  period: 'monthly' | 'weekly' | 'yearly',
+  rolloverDay?: number
+): number => {
+  const elapsed = calculateElapsedPeriods(plan.startPeriodDate, period, rolloverDay);
+  const cappedElapsed = Math.min(elapsed, plan.numInstallments);
+  return cappedElapsed * plan.amountPerInstallment;
 };

@@ -1,4 +1,5 @@
 import { Transaction } from '../types/transaction';
+import { decodeHtmlEntities } from './textUtils';
 
 export interface ChaseCSVRow {
   'Transaction Date': string;
@@ -98,7 +99,7 @@ export const chaseRowToTransaction = (row: ChaseCSVRow, accountName: string = 'C
   return {
     id: uniqueId,
     date: date,
-    description: row.Description.trim(),
+    description: decodeHtmlEntities(row.Description.trim()),
     amount: amount,
     type: type,
     category: category,
@@ -172,7 +173,7 @@ export const paypalRowToTransaction = (row: PayPalCSVRow, accountName: string = 
   const uniqueId = `paypal_${Date.now()}_${rowIndex}_${Math.random().toString(36).substring(2, 9)}`;
 
   // Use merchant name as description, or type if no name
-  const description = row.Name.trim() || row.Type;
+  const description = decodeHtmlEntities(row.Name.trim() || row.Type);
 
   return {
     id: uniqueId,
