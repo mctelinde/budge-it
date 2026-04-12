@@ -382,8 +382,10 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             '& button': {
               color: '#ffffff !important',
               opacity: 0.9,
+              backgroundColor: 'transparent !important',
               '&:hover': {
                 opacity: 1,
+                backgroundColor: 'rgba(255, 255, 255, 0.1) !important',
               },
             },
           },
