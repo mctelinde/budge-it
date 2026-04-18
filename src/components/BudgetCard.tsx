@@ -308,7 +308,6 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                         id: '',
                         title: title || '',
                         amount: budgetTotal,
-                        spent: 0,
                         period,
                         createdAt: '',
                         startDate,

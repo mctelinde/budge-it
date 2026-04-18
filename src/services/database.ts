@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Budget, Transaction, InstallmentPlan } from '../types/transaction';
+import { Budget, Forecast, Transaction, InstallmentPlan } from '../types/transaction';
 
 /**
  * Database service layer for Supabase operations
@@ -77,7 +77,6 @@ export const budgetService = {
       title: budget.title,
       amount: budget.amount,
       period: budget.period,
-      spent: budget.spent ?? 0,
       starting_balance: budget.startingBalance ?? 0,
     };
 
@@ -107,7 +106,6 @@ export const budgetService = {
     if (updates.title !== undefined) updateData.title = updates.title;
     if (updates.amount !== undefined) updateData.amount = updates.amount;
     if (updates.period !== undefined) updateData.period = updates.period;
-    if (updates.spent !== undefined) updateData.spent = updates.spent;
     if (updates.startingBalance !== undefined) updateData.starting_balance = updates.startingBalance;
     if (updates.startDate !== undefined) updateData.start_date = updates.startDate;
     if (updates.rolloverDay !== undefined) updateData.rollover_day = updates.rolloverDay;
@@ -379,7 +377,6 @@ function mapBudgetFromDb(dbBudget: any): Budget {
     title: dbBudget.title,
     amount: Number(dbBudget.amount),
     period: dbBudget.period,
-    spent: Number(dbBudget.spent),
     startingBalance: Number(dbBudget.starting_balance || 0),
     startDate: dbBudget.start_date || undefined,
     rolloverDay: dbBudget.rollover_day || undefined,
@@ -533,6 +530,111 @@ export const categoryService = {
   async delete(id: string): Promise<void> {
     const { error } = await supabase
       .from('categories')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+};
+
+// ==================== FORECASTS ====================
+
+function mapForecastFromDb(dbForecast: any): Forecast {
+  return {
+    id: dbForecast.id,
+    budgetId: dbForecast.budget_id,
+    title: dbForecast.title,
+    targetAmount: Number(dbForecast.target_amount),
+    notes: dbForecast.notes ?? undefined,
+    achievedAt: dbForecast.achieved_at ?? null,
+    createdAt: dbForecast.created_at,
+  };
+}
+
+export const forecastService = {
+  async getAll(): Promise<Forecast[]> {
+    const user = await getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('forecasts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(mapForecastFromDb);
+  },
+
+  async getByBudgetId(budgetId: string): Promise<Forecast[]> {
+    const user = await getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('forecasts')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('budget_id', budgetId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(mapForecastFromDb);
+  },
+
+  async create(forecast: Omit<Forecast, 'id' | 'createdAt'>): Promise<Forecast> {
+    const user = await getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('forecasts')
+      .insert([{
+        user_id: user.id,
+        budget_id: forecast.budgetId,
+        title: forecast.title,
+        target_amount: forecast.targetAmount,
+        notes: forecast.notes ?? null,
+        achieved_at: forecast.achievedAt ?? null,
+      }] as any)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return mapForecastFromDb(data);
+  },
+
+  async update(id: string, updates: Partial<Omit<Forecast, 'id' | 'createdAt'>>): Promise<Forecast> {
+    const updateData: Record<string, any> = {};
+
+    if (updates.budgetId !== undefined) updateData.budget_id = updates.budgetId;
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.targetAmount !== undefined) updateData.target_amount = updates.targetAmount;
+    if (updates.notes !== undefined) updateData.notes = updates.notes;
+    if (updates.achievedAt !== undefined) updateData.achieved_at = updates.achievedAt;
+
+    const { data, error } = await (supabase
+      .from('forecasts')
+      .update as any)(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return mapForecastFromDb(data);
+  },
+
+  async markAchieved(id: string): Promise<void> {
+    const { error } = await (supabase
+      .from('forecasts')
+      .update as any)({ achieved_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('forecasts')
       .delete()
       .eq('id', id);
 

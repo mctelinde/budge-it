@@ -58,7 +58,6 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
       onSave({
         title: title.trim(),
         amount: parseFloat(amount),
-        spent: budget?.spent || 0,
         period,
         categories: budget?.categories || [],
         startingBalance: startingBalance ? parseFloat(startingBalance) : 0,

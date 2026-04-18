@@ -1,4 +1,4 @@
-import { Budget, InstallmentPlan } from '../types/transaction';
+import { Budget, InstallmentPlan, Transaction } from '../types/transaction';
 
 /**
  * Calculate how many budget periods have elapsed based on rollover day
@@ -130,4 +130,41 @@ export const calculateInstallmentSpent = (
   const elapsed = calculateElapsedPeriods(plan.startPeriodDate, period, rolloverDay);
   const cappedElapsed = Math.min(elapsed, plan.numInstallments);
   return cappedElapsed * plan.amountPerInstallment;
+};
+
+/**
+ * Calculate the net amount spent against a budget from its allocated transactions.
+ * Mirrors the logic in BudgetPage.getBudgetSpent — installment-plan transactions
+ * are excluded from direct counting and replaced with their period-prorated cost.
+ */
+export const calculateBudgetSpent = (
+  budget: Budget,
+  transactions: Transaction[]
+): number => {
+  if (!budget.transactionIds || budget.transactionIds.length === 0) {
+    return 0;
+  }
+
+  const installmentTxnIds = new Set(
+    (budget.installmentPlans || []).map((p) => p.transactionId)
+  );
+
+  const directTransactions = transactions.filter(
+    (t) => budget.transactionIds?.includes(t.id) && !installmentTxnIds.has(t.id)
+  );
+
+  const expenses = directTransactions
+    .filter((t) => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const credits = directTransactions
+    .filter((t) => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const installmentTotal = (budget.installmentPlans || []).reduce(
+    (sum, plan) => sum + calculateInstallmentSpent(plan, budget.period, budget.rolloverDay),
+    0
+  );
+
+  return expenses - credits + installmentTotal;
 };

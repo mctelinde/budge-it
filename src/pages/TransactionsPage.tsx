@@ -173,7 +173,6 @@ export const TransactionsPage: React.FC = () => {
       await budgetService.create({
         title: budgetData.title || '',
         amount: budgetData.amount || 0,
-        spent: 0,
         period: budgetData.period || 'monthly',
         categories: budgetData.categories || [],
         transactionIds: [],

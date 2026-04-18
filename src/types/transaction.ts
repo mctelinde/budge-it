@@ -1,3 +1,13 @@
+export interface Forecast {
+  id: string;
+  budgetId: string;
+  title: string;
+  targetAmount: number;
+  notes?: string;
+  achievedAt?: string | null; // ISO date string, null when not yet achieved
+  createdAt: string;
+}
+
 export interface InstallmentPlan {
   id: string;
   transactionId: string;
@@ -26,7 +36,6 @@ export interface Budget {
   id: string;
   title: string;
   amount: number;
-  spent: number;
   period: 'monthly' | 'weekly' | 'yearly';
   createdAt: string;
   categories?: string[];
