@@ -149,7 +149,7 @@ export const ForecastsPage: React.FC = () => {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={handleOpenCreate}
-              sx={{ mt: 2 }}
+              sx={{ mt: 2, backgroundColor: '#14959c', '&:hover': { backgroundColor: '#0d7378' } }}
             >
               New Forecast
             </Button>
@@ -178,10 +178,9 @@ export const ForecastsPage: React.FC = () => {
       )}
 
       <Fab
-        color="primary"
         aria-label="Add forecast"
         onClick={handleOpenCreate}
-        sx={{ position: 'fixed', bottom: 24, right: 24 }}
+        sx={{ position: 'fixed', bottom: 24, right: 24, backgroundColor: '#14959c', color: '#fff', '&:hover': { backgroundColor: '#0d7378' } }}
       >
         <AddIcon />
       </Fab>

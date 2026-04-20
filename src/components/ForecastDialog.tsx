@@ -10,6 +10,7 @@ import {
   Stack,
   InputAdornment,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Forecast, Budget } from '../types/transaction';
 import { forecastService } from '../services/database';
 
@@ -30,6 +31,7 @@ export const ForecastDialog: React.FC<ForecastDialogProps> = ({
   budgets,
   defaultBudgetId,
 }) => {
+  const theme = useTheme();
   const [budgetId, setBudgetId] = useState('');
   const [title, setTitle] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
@@ -153,10 +155,36 @@ export const ForecastDialog: React.FC<ForecastDialogProps> = ({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+        <Button
+          onClick={onClose}
+          disabled={saving}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.08)'
+                : 'rgba(0, 0, 0, 0.04)',
+            },
+          }}
+        >
           Cancel
         </Button>
-        <Button onClick={handleSave} variant="contained" disabled={saving}>
+        <Button
+          onClick={handleSave}
+          variant="contained"
+          disabled={saving}
+          sx={{
+            background: theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
+              : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
+            color: '#ffffff',
+            '&:hover': {
+              background: theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, #0a5c5f 0%, #107a80 100%)'
+                : 'linear-gradient(135deg, #107a80 0%, #1aa3a9 100%)',
+            },
+          }}
+        >
           {saving ? 'Saving…' : isEditing ? 'Save Changes' : 'Create Forecast'}
         </Button>
       </DialogActions>

@@ -20,8 +20,6 @@ import {
   Brightness7,
   Receipt,
   AccountBalance,
-  Assessment,
-  Description,
   ChevronLeft,
   ChevronRight,
   Settings,
@@ -65,8 +63,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
     { text: 'Budgets', icon: <AccountBalance />, path: '/app/budget' },
     { text: 'Forecasts', icon: <TrendingUpIcon />, path: '/app/forecasts' },
     { text: 'Transactions', icon: <Receipt />, path: '/app/transactions' },
-    { text: 'Bills', icon: <Description />, path: '/app/bills' },
-    { text: 'Spending', icon: <Assessment />, path: '/app/spending' },
   ];
 
   const currentPage = menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard';

@@ -67,7 +67,7 @@ export const AuthPage: React.FC = () => {
         if (error) {
           setError(error.message);
         } else {
-          navigate('/app/transactions');
+          navigate('/app/budget');
         }
       }
     } catch (err) {

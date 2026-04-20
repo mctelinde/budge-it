@@ -7,9 +7,7 @@ import { lightTheme, darkTheme } from './themes/theme';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AuthPage } from './pages/AuthPage';
 import { TransactionsPage } from './pages/TransactionsPage';
-import { BillsPage } from './pages/BillsPage';
 import { BudgetPage } from './pages/BudgetPage';
-import { SpendingPage } from './pages/SpendingPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { CategoryManagementPage } from './pages/CategoryManagementPage';
 import { ForecastsPage } from './pages/ForecastsPage';
@@ -66,31 +64,11 @@ function AppContent() {
             }
           />
           <Route
-            path="/app/bills"
-            element={
-              <ProtectedRoute>
-                <Layout toggleTheme={toggleTheme}>
-                  <BillsPage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/app/budget"
             element={
               <ProtectedRoute>
                 <Layout toggleTheme={toggleTheme}>
                   <BudgetPage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/app/spending"
-            element={
-              <ProtectedRoute>
-                <Layout toggleTheme={toggleTheme}>
-                  <SpendingPage />
                 </Layout>
               </ProtectedRoute>
             }
@@ -125,7 +103,7 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
-          <Route path="/app" element={<Navigate to="/app/transactions" replace />} />
+          <Route path="/app" element={<Navigate to="/app/budget" replace />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
