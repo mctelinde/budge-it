@@ -26,6 +26,7 @@ import {
   AccountBalanceWallet,
   Logout,
   TrendingUp as TrendingUpIcon,
+  ShowChart as ShowChartIcon,
 } from '@mui/icons-material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -62,6 +63,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, toggleTheme }) => {
   const menuItems = [
     { text: 'Budgets', icon: <AccountBalance />, path: '/app/budget' },
     { text: 'Forecasts', icon: <TrendingUpIcon />, path: '/app/forecasts' },
+    { text: 'Spending', icon: <ShowChartIcon />, path: '/app/spending' },
     { text: 'Transactions', icon: <Receipt />, path: '/app/transactions' },
   ];
 

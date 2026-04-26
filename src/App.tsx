@@ -11,6 +11,7 @@ import { BudgetPage } from './pages/BudgetPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { CategoryManagementPage } from './pages/CategoryManagementPage';
 import { ForecastsPage } from './pages/ForecastsPage';
+import { SpendingPage } from './pages/SpendingPage';
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -99,6 +100,16 @@ function AppContent() {
               <ProtectedRoute>
                 <Layout toggleTheme={toggleTheme}>
                   <ForecastsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/spending"
+            element={
+              <ProtectedRoute>
+                <Layout toggleTheme={toggleTheme}>
+                  <SpendingPage />
                 </Layout>
               </ProtectedRoute>
             }

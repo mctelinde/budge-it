@@ -15,6 +15,7 @@ import {
   DialogActions,
   Alert,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   Category as CategoryIcon,
   AccountBalance,
@@ -26,6 +27,7 @@ import {
 import { Link } from 'react-router-dom';
 
 export const SettingsPage: React.FC = () => {
+  const theme = useTheme();
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
 
@@ -203,7 +205,18 @@ export const SettingsPage: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setConfirmDialogOpen(false)} disabled={clearing}>
+          <Button
+            onClick={() => setConfirmDialogOpen(false)}
+            disabled={clearing}
+            sx={{
+              color: theme.palette.text.primary,
+              '&:hover': {
+                backgroundColor: theme.palette.mode === 'dark'
+                  ? 'rgba(255, 255, 255, 0.08)'
+                  : 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+          >
             Cancel
           </Button>
           <Button

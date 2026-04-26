@@ -1,3 +1,13 @@
+export interface Account {
+  id: string;
+  name: string;
+  type: 'bank' | 'credit_card';
+  currentBalance: number;
+  notes?: string;
+  displayOrder: number;
+  createdAt: string;
+}
+
 export interface Forecast {
   id: string;
   budgetId: string;
@@ -5,6 +15,20 @@ export interface Forecast {
   targetAmount: number;
   notes?: string;
   achievedAt?: string | null; // ISO date string, null when not yet achieved
+  createdAt: string;
+}
+
+export interface RecurringCharge {
+  id: string;
+  budgetId: string;
+  /** Matched case-insensitively against transaction.description */
+  description: string;
+  /** Per-period charge amount */
+  amount: number;
+  /** ISO date string — rollover date of the first period this charge applies */
+  startPeriodDate: string;
+  /** ISO date string — optional end date; undefined means indefinite */
+  endPeriodDate?: string;
   createdAt: string;
 }
 
@@ -46,4 +70,5 @@ export interface Budget {
   pinned?: boolean; // Whether budget is pinned to transactions page
   displayOrder?: number; // Order for displaying budgets
   installmentPlans?: InstallmentPlan[];
+  recurringCharges?: RecurringCharge[];
 }

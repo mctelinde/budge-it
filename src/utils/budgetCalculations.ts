@@ -1,4 +1,4 @@
-import { Budget, InstallmentPlan, Transaction } from '../types/transaction';
+import { Budget, InstallmentPlan, RecurringCharge, Transaction } from '../types/transaction';
 
 /**
  * Calculate how many budget periods have elapsed based on rollover day
@@ -86,6 +86,74 @@ export const calculateElapsedPeriods = (
 };
 
 /**
+ * Like calculateElapsedPeriods but counts up to a specific "as of" date
+ * instead of the current date. Used to cap recurring charges at their end date.
+ */
+export const calculateElapsedPeriodsAsOf = (
+  startDate: string | undefined,
+  period: 'monthly' | 'weekly' | 'yearly',
+  asOf: Date,
+  rolloverDay?: number
+): number => {
+  if (!startDate) return 1;
+
+  const start = new Date(startDate);
+
+  if (start > asOf) return 0;
+
+  switch (period) {
+    case 'monthly': {
+      if (rolloverDay) {
+        let count = 0;
+        const startMonth = start.getMonth();
+        const startYear = start.getFullYear();
+        let rolloverDate = new Date(startYear, startMonth, rolloverDay);
+        if (start > rolloverDate) {
+          rolloverDate = new Date(startYear, startMonth + 1, rolloverDay);
+        }
+        while (rolloverDate <= asOf) {
+          count++;
+          const nextMonth = rolloverDate.getMonth() + 1;
+          const nextYear = rolloverDate.getFullYear();
+          rolloverDate = new Date(nextYear, nextMonth, rolloverDay);
+        }
+        return count;
+      } else {
+        const yearsDiff = asOf.getFullYear() - start.getFullYear();
+        const monthsDiff = asOf.getMonth() - start.getMonth();
+        return yearsDiff * 12 + monthsDiff + 1;
+      }
+    }
+    case 'weekly': {
+      const ms = asOf.getTime() - start.getTime();
+      return Math.floor(ms / (7 * 24 * 60 * 60 * 1000)) + 1;
+    }
+    case 'yearly': {
+      return asOf.getFullYear() - start.getFullYear() + 1;
+    }
+    default:
+      return 1;
+  }
+};
+
+/**
+ * Calculate the total amount a recurring charge has contributed to the budget.
+ * Counts amount × elapsed_periods, capped at endPeriodDate if set.
+ */
+export const calculateRecurringChargeTotal = (
+  charge: RecurringCharge,
+  period: 'monthly' | 'weekly' | 'yearly',
+  rolloverDay?: number
+): number => {
+  const now = new Date();
+  const asOf = charge.endPeriodDate
+    ? new Date(Math.min(now.getTime(), new Date(charge.endPeriodDate).getTime()))
+    : now;
+  const elapsed = calculateElapsedPeriodsAsOf(charge.startPeriodDate, period, asOf, rolloverDay);
+  return charge.amount * elapsed;
+};
+
+/**
  * Calculate the cumulative budget amount based on elapsed periods
  */
 export const calculateCumulativeBudget = (
@@ -133,9 +201,29 @@ export const calculateInstallmentSpent = (
 };
 
 /**
+ * Calculate the total installment amount that will be charged in the next period.
+ * A plan contributes its per-installment amount if it has not yet reached its cap.
+ */
+export const calculateNextPeriodInstallments = (
+  installmentPlans: InstallmentPlan[],
+  period: 'monthly' | 'weekly' | 'yearly',
+  rolloverDay?: number
+): number => {
+  return installmentPlans.reduce((sum, plan) => {
+    const elapsed = calculateElapsedPeriods(plan.startPeriodDate, period, rolloverDay);
+    if (elapsed < plan.numInstallments) {
+      return sum + plan.amountPerInstallment;
+    }
+    return sum;
+  }, 0);
+};
+
+/**
  * Calculate the net amount spent against a budget from its allocated transactions.
  * Mirrors the logic in BudgetPage.getBudgetSpent — installment-plan transactions
  * are excluded from direct counting and replaced with their period-prorated cost.
+ * Recurring-charge transactions are also excluded from direct counting and replaced
+ * with their period-based totals.
  */
 export const calculateBudgetSpent = (
   budget: Budget,
@@ -149,8 +237,20 @@ export const calculateBudgetSpent = (
     (budget.installmentPlans || []).map((p) => p.transactionId)
   );
 
+  const recurringCharges = budget.recurringCharges || [];
+
+  const isMatchedByRecurringCharge = (t: Transaction): boolean =>
+    recurringCharges.some(
+      (c) =>
+        c.description.toLowerCase() === t.description.toLowerCase() &&
+        c.amount === t.amount
+    );
+
   const directTransactions = transactions.filter(
-    (t) => budget.transactionIds?.includes(t.id) && !installmentTxnIds.has(t.id)
+    (t) =>
+      budget.transactionIds?.includes(t.id) &&
+      !installmentTxnIds.has(t.id) &&
+      !isMatchedByRecurringCharge(t)
   );
 
   const expenses = directTransactions
@@ -166,5 +266,10 @@ export const calculateBudgetSpent = (
     0
   );
 
-  return expenses - credits + installmentTotal;
+  const recurringTotal = recurringCharges.reduce(
+    (sum, charge) => sum + calculateRecurringChargeTotal(charge, budget.period, budget.rolloverDay),
+    0
+  );
+
+  return expenses - credits + installmentTotal + recurringTotal;
 };

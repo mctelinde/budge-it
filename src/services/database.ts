@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Budget, Forecast, Transaction, InstallmentPlan } from '../types/transaction';
+import { Budget, Forecast, Transaction, InstallmentPlan, RecurringCharge, Account } from '../types/transaction';
 
 /**
  * Database service layer for Supabase operations
@@ -43,6 +43,14 @@ export const budgetService = {
         .eq('budget_id', budget.id);
 
       budget.installmentPlans = (planData || []).map(mapInstallmentPlanFromDb);
+
+      const { data: chargeData } = await supabase
+        .from('recurring_charges')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('budget_id', budget.id);
+
+      budget.recurringCharges = (chargeData || []).map(mapRecurringChargeFromDb);
     }
 
     return budgets;
@@ -535,6 +543,15 @@ export const categoryService = {
 
     if (error) throw error;
   },
+
+  /**
+   * Update an existing category
+   */
+  async update(id: string, updates: { name?: string; type?: 'income' | 'expense'; color?: string; icon?: string }): Promise<void> {
+    const { error } = await (supabase.from('categories').update as any)(updates).eq('id', id);
+
+    if (error) throw error;
+  },
 };
 
 // ==================== FORECASTS ====================
@@ -638,6 +655,192 @@ export const forecastService = {
       .delete()
       .eq('id', id);
 
+    if (error) throw error;
+  },
+};
+
+// ==================== RECURRING CHARGES ====================
+
+function mapRecurringChargeFromDb(dbCharge: any): RecurringCharge {
+  return {
+    id: dbCharge.id,
+    budgetId: dbCharge.budget_id,
+    description: dbCharge.description,
+    amount: Number(dbCharge.amount),
+    startPeriodDate: dbCharge.start_period_date,
+    endPeriodDate: dbCharge.end_period_date ?? undefined,
+    createdAt: dbCharge.created_at,
+  };
+}
+
+export const recurringChargeService = {
+  /**
+   * Create a new recurring charge for a budget.
+   */
+  async create(charge: {
+    budgetId: string;
+    description: string;
+    amount: number;
+    startPeriodDate: string;
+    endPeriodDate?: string;
+  }): Promise<RecurringCharge> {
+    const user = await getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('recurring_charges')
+      .insert([{
+        user_id: user.id,
+        budget_id: charge.budgetId,
+        description: charge.description,
+        amount: charge.amount,
+        start_period_date: charge.startPeriodDate,
+        end_period_date: charge.endPeriodDate ?? null,
+      }] as any)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return mapRecurringChargeFromDb(data);
+  },
+
+  /**
+   * Update an existing recurring charge (e.g., change amount or end date).
+   */
+  async update(id: string, updates: {
+    amount?: number;
+    endPeriodDate?: string | null;
+  }): Promise<RecurringCharge> {
+    const updateData: Record<string, any> = {};
+    if (updates.amount !== undefined) updateData.amount = updates.amount;
+    if ('endPeriodDate' in updates) updateData.end_period_date = updates.endPeriodDate ?? null;
+
+    const { data, error } = await (supabase
+      .from('recurring_charges')
+      .update as any)(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return mapRecurringChargeFromDb(data);
+  },
+
+  /**
+   * Get all recurring charges for a given budget.
+   */
+  async getForBudget(budgetId: string): Promise<RecurringCharge[]> {
+    const user = await getCurrentUser();
+
+    const { data, error } = await supabase
+      .from('recurring_charges')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('budget_id', budgetId);
+
+    if (error) throw error;
+
+    return (data || []).map(mapRecurringChargeFromDb);
+  },
+
+  /**
+   * Remove a recurring charge. Previously-excluded matching transactions
+   * will resume being counted directly on the next spend calculation.
+   */
+  async remove(chargeId: string): Promise<void> {
+    const { error } = await supabase
+      .from('recurring_charges')
+      .delete()
+      .eq('id', chargeId);
+
+    if (error) throw error;
+  },
+};
+
+// ==================== ACCOUNTS ====================
+
+function mapAccountFromDb(row: Record<string, unknown>): Account {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    type: row.type as 'bank' | 'credit_card',
+    currentBalance: Number(row.current_balance),
+    notes: row.notes as string | undefined,
+    displayOrder: Number(row.display_order),
+    createdAt: row.created_at as string,
+  };
+}
+
+export const accountService = {
+  async getAll(): Promise<Account[]> {
+    const user = await getCurrentUser();
+    const { data, error } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('display_order', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return (data || []).map(mapAccountFromDb);
+  },
+
+  async create(account: {
+    name: string;
+    type: 'bank' | 'credit_card';
+    currentBalance: number;
+    notes?: string;
+    displayOrder?: number;
+  }): Promise<Account> {
+    const user = await getCurrentUser();
+    const { data, error } = await supabase
+      .from('accounts')
+      .insert({
+        user_id: user.id,
+        name: account.name,
+        type: account.type,
+        current_balance: account.currentBalance,
+        notes: account.notes ?? null,
+        display_order: account.displayOrder ?? 0,
+      } as any)
+      .select()
+      .single();
+    if (error) throw error;
+    return mapAccountFromDb(data);
+  },
+
+  async update(
+    accountId: string,
+    updates: Partial<{
+      name: string;
+      type: 'bank' | 'credit_card';
+      currentBalance: number;
+      notes: string | null;
+      displayOrder: number;
+    }>
+  ): Promise<Account> {
+    const dbUpdates: Record<string, unknown> = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.type !== undefined) dbUpdates.type = updates.type;
+    if (updates.currentBalance !== undefined) dbUpdates.current_balance = updates.currentBalance;
+    if ('notes' in updates) dbUpdates.notes = updates.notes;
+    if (updates.displayOrder !== undefined) dbUpdates.display_order = updates.displayOrder;
+
+    const { data, error } = await (supabase
+      .from('accounts')
+      .update as any)(dbUpdates)
+      .eq('id', accountId)
+      .select()
+      .single();
+    if (error) throw error;
+    return mapAccountFromDb(data);
+  },
+
+  async remove(accountId: string): Promise<void> {
+    const { error } = await supabase
+      .from('accounts')
+      .delete()
+      .eq('id', accountId);
     if (error) throw error;
   },
 };

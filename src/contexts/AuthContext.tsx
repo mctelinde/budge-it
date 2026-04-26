@@ -43,7 +43,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // On iOS PWA, JS timers freeze when backgrounded, so autoRefreshToken never
+    // fires while suspended. Eagerly call getSession() when the app returns to
+    // the foreground — the Supabase client will silently exchange an expired
+    // access token for a fresh one using the still-valid refresh token.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const signUp = async (email: string, password: string) => {

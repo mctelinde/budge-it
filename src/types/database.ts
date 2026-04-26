@@ -149,6 +149,76 @@ export interface Database {
           updated_at?: string
         }
       }
+      recurring_charges: {
+        Row: {
+          id: string
+          user_id: string
+          budget_id: string
+          description: string
+          amount: number
+          start_period_date: string
+          end_period_date: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          budget_id: string
+          description: string
+          amount: number
+          start_period_date: string
+          end_period_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          budget_id?: string
+          description?: string
+          amount?: number
+          start_period_date?: string
+          end_period_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      accounts: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          type: 'bank' | 'credit_card'
+          current_balance: number
+          notes: string | null
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          type: 'bank' | 'credit_card'
+          current_balance?: number
+          notes?: string | null
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          type?: 'bank' | 'credit_card'
+          current_balance?: number
+          notes?: string | null
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

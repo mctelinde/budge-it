@@ -23,13 +23,15 @@ import {
   Collapse,
   Paper,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   Search as SearchIcon,
   FilterList as FilterListIcon,
   CalendarMonth as CalendarMonthIcon,
   Close as CloseIcon,
+  Autorenew as AutorenewIcon,
 } from '@mui/icons-material';
-import { Transaction, Budget, InstallmentPlan } from '../types/transaction';
+import { Transaction, Budget, InstallmentPlan, RecurringCharge } from '../types/transaction';
 import { decodeHtmlEntities } from '../utils/textUtils';
 
 interface TransactionAllocationDialogProps {
@@ -47,6 +49,18 @@ interface TransactionAllocationDialogProps {
     startPeriodDate: string
   ) => void;
   onInstallmentRemove?: (planId: string) => void;
+  recurringCharges?: RecurringCharge[];
+  onRecurringChargeSave?: (
+    description: string,
+    amount: number,
+    startPeriodDate: string,
+    endPeriodDate?: string
+  ) => void;
+  onRecurringChargeUpdate?: (
+    chargeId: string,
+    updates: { amount?: number; endPeriodDate?: string | null }
+  ) => void;
+  onRecurringChargeRemove?: (chargeId: string) => void;
 }
 
 export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogProps> = ({
@@ -59,7 +73,12 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
   installmentPlans = [],
   onInstallmentSave,
   onInstallmentRemove,
+  recurringCharges = [],
+  onRecurringChargeSave,
+  onRecurringChargeUpdate,
+  onRecurringChargeRemove,
 }) => {
+  const theme = useTheme();
   const [selectedIds, setSelectedIds] = useState<string[]>(budget.transactionIds || []);
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyAllocated, setShowOnlyAllocated] = useState(initialFilterAllocated);
@@ -69,11 +88,17 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
   const [installmentNumPayments, setInstallmentNumPayments] = useState<number>(6);
   const [installmentAmountStr, setInstallmentAmountStr] = useState<string>('');
 
+  // Recurring charge editing state
+  const [expandedRecurringTxnId, setExpandedRecurringTxnId] = useState<string | null>(null);
+  const [recurringAmountStr, setRecurringAmountStr] = useState<string>('');
+  const [recurringEndDate, setRecurringEndDate] = useState<string>('');
+
   // Reset state when dialog opens
   React.useEffect(() => {
     if (open) {
       setShowOnlyAllocated(initialFilterAllocated);
       setExpandedInstallmentTxnId(null);
+      setExpandedRecurringTxnId(null);
     }
   }, [open, initialFilterAllocated]);
 
@@ -143,6 +168,7 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
     setSearchQuery('');
     setShowOnlyAllocated(false);
     setExpandedInstallmentTxnId(null);
+    setExpandedRecurringTxnId(null);
     onClose();
   };
 
@@ -211,6 +237,55 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
       onInstallmentRemove?.(plan.id);
     }
     setExpandedInstallmentTxnId(null);
+  };
+
+  // Returns the existing recurring charge that matches this transaction's description+amount
+  const getExistingRecurringCharge = (transaction: Transaction): RecurringCharge | undefined =>
+    recurringCharges.find(
+      (c) =>
+        c.description.toLowerCase() === transaction.description.toLowerCase() &&
+        c.amount === transaction.amount
+    );
+
+  const handleToggleRecurringPanel = (transaction: Transaction) => {
+    if (expandedRecurringTxnId === transaction.id) {
+      setExpandedRecurringTxnId(null);
+      return;
+    }
+    // Close installment panel if open
+    setExpandedInstallmentTxnId(null);
+    const existing = getExistingRecurringCharge(transaction);
+    setRecurringAmountStr(existing ? existing.amount.toFixed(2) : transaction.amount.toFixed(2));
+    setRecurringEndDate(existing?.endPeriodDate ?? '');
+    setExpandedRecurringTxnId(transaction.id);
+  };
+
+  const handleRecurringChargeSave = (transaction: Transaction) => {
+    const amount = parseFloat(recurringAmountStr);
+    if (!amount || amount <= 0) return;
+    const existing = getExistingRecurringCharge(transaction);
+    if (existing) {
+      onRecurringChargeUpdate?.(existing.id, {
+        amount,
+        endPeriodDate: recurringEndDate || null,
+      });
+    } else {
+      onRecurringChargeSave?.(
+        transaction.description,
+        amount,
+        computeStartPeriodDate(transaction.date),
+        recurringEndDate || undefined
+      );
+    }
+    setExpandedRecurringTxnId(null);
+  };
+
+  const handleRecurringChargeRemove = (transaction: Transaction) => {
+    const charge = getExistingRecurringCharge(transaction);
+    if (charge) {
+      onRecurringChargeRemove?.(charge.id);
+    }
+    setExpandedRecurringTxnId(null);
   };
 
   return (
@@ -322,14 +397,16 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
           <List sx={{ maxHeight: 400, overflow: 'auto' }}>
             {filteredTransactions.map((transaction) => {
               const existingPlan = getExistingPlan(transaction.id);
+              const existingRecurringCharge = getExistingRecurringCharge(transaction);
               const isAllocated = selectedIds.includes(transaction.id);
               const isExpanded = expandedInstallmentTxnId === transaction.id;
+              const isRecurringExpanded = expandedRecurringTxnId === transaction.id;
 
               return (
                 <React.Fragment key={transaction.id}>
                   <ListItem disablePadding
                     secondaryAction={
-                      isAllocated && onInstallmentSave ? (
+                      isAllocated && (onInstallmentSave || onRecurringChargeSave) ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pr: 1 }}>
                           {existingPlan && (
                             <Chip
@@ -340,14 +417,37 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
                               sx={{ fontSize: '0.7rem' }}
                             />
                           )}
-                          <IconButton
-                            size="small"
-                            onClick={(e) => { e.stopPropagation(); handleToggleInstallmentPanel(transaction); }}
-                            title={existingPlan ? 'Edit payment schedule' : 'Set up payment schedule'}
-                            sx={{ color: existingPlan ? 'info.main' : 'text.secondary' }}
-                          >
-                            <CalendarMonthIcon fontSize="small" />
-                          </IconButton>
+                          {existingRecurringCharge && (
+                            <Chip
+                              label={existingRecurringCharge.endPeriodDate
+                                ? `$${existingRecurringCharge.amount.toFixed(2)}/mo until ${new Date(existingRecurringCharge.endPeriodDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
+                                : `$${existingRecurringCharge.amount.toFixed(2)}/mo ∞`}
+                              size="small"
+                              color="success"
+                              variant="outlined"
+                              sx={{ fontSize: '0.7rem' }}
+                            />
+                          )}
+                          {onInstallmentSave && (
+                            <IconButton
+                              size="small"
+                              onClick={(e) => { e.stopPropagation(); handleToggleInstallmentPanel(transaction); }}
+                              title={existingPlan ? 'Edit payment schedule' : 'Set up payment schedule'}
+                              sx={{ color: existingPlan ? 'info.main' : 'text.secondary' }}
+                            >
+                              <CalendarMonthIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                          {onRecurringChargeSave && (
+                            <IconButton
+                              size="small"
+                              onClick={(e) => { e.stopPropagation(); handleToggleRecurringPanel(transaction); }}
+                              title={existingRecurringCharge ? 'Edit recurring charge' : 'Set as recurring monthly charge'}
+                              sx={{ color: existingRecurringCharge ? 'success.main' : 'text.secondary' }}
+                            >
+                              <AutorenewIcon fontSize="small" />
+                            </IconButton>
+                          )}
                         </Box>
                       ) : undefined
                     }
@@ -478,6 +578,88 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
                       </Box>
                     </Paper>
                   </Collapse>
+                  {/* Inline recurring charge form */}
+                  <Collapse in={isRecurringExpanded} unmountOnExit>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        mx: 2,
+                        mb: 1,
+                        p: 2,
+                        border: '1px solid',
+                        borderColor: 'success.light',
+                        borderRadius: 2,
+                        backgroundColor: (theme) =>
+                          theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.08)' : 'rgba(46, 125, 50, 0.04)',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                        <Typography variant="subtitle2" color="success.main">
+                          Recurring Monthly Charge
+                        </Typography>
+                        <IconButton size="small" onClick={() => setExpandedRecurringTxnId(null)}>
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 1.5 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">Description (matched)</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {transaction.description}
+                          </Typography>
+                        </Box>
+                        <TextField
+                          label="Amount per period"
+                          size="small"
+                          value={recurringAmountStr}
+                          onChange={(e) => setRecurringAmountStr(e.target.value)}
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                          }}
+                          sx={{ width: 160 }}
+                        />
+                        <TextField
+                          label="End date (optional)"
+                          type="month"
+                          size="small"
+                          value={recurringEndDate}
+                          onChange={(e) => setRecurringEndDate(e.target.value)}
+                          helperText="Leave blank for indefinite"
+                          InputLabelProps={{ shrink: true }}
+                          sx={{ width: 180 }}
+                        />
+                        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">Starts from period</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {new Date(computeStartPeriodDate(transaction.date) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric', day: 'numeric' })}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => handleRecurringChargeSave(transaction)}
+                          disabled={!recurringAmountStr || parseFloat(recurringAmountStr) <= 0}
+                          sx={{ backgroundColor: 'success.main', '&:hover': { backgroundColor: 'success.dark' } }}
+                        >
+                          {existingRecurringCharge ? 'Update Charge' : 'Activate Recurring Charge'}
+                        </Button>
+                        {existingRecurringCharge && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            onClick={() => handleRecurringChargeRemove(transaction)}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </Box>
+                    </Paper>
+                  </Collapse>
                 </React.Fragment>
               );
             })}
@@ -486,16 +668,31 @@ export const TransactionAllocationDialog: React.FC<TransactionAllocationDialogPr
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={handleClose} color="inherit">
+        <Button
+          onClick={handleClose}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.08)'
+                : 'rgba(0, 0, 0, 0.04)',
+            },
+          }}
+        >
           Cancel
         </Button>
         <Button
           onClick={handleSave}
           variant="contained"
           sx={{
-            backgroundColor: '#14959c',
+            background: theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
+              : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
+            color: '#ffffff',
             '&:hover': {
-              backgroundColor: '#0d7378',
+              background: theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, #0a5c5f 0%, #107a80 100%)'
+                : 'linear-gradient(135deg, #107a80 0%, #1aa3a9 100%)',
             },
           }}
         >

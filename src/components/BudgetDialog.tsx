@@ -13,6 +13,7 @@ import {
   Box,
   InputAdornment,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Budget } from '../types/transaction';
 
 interface BudgetDialogProps {
@@ -28,6 +29,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
   onSave,
   budget,
 }) => {
+  const theme = useTheme();
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [period, setPeriod] = useState<'monthly' | 'weekly' | 'yearly'>('monthly');
@@ -175,7 +177,17 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={handleClose} color="inherit">
+        <Button
+          onClick={handleClose}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.08)'
+                : 'rgba(0, 0, 0, 0.04)',
+            },
+          }}
+        >
           Cancel
         </Button>
         <Button
@@ -183,9 +195,14 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
           variant="contained"
           disabled={!title.trim() || !amount || parseFloat(amount) <= 0}
           sx={{
-            backgroundColor: '#14959c',
+            background: theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
+              : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
+            color: '#ffffff',
             '&:hover': {
-              backgroundColor: '#0d7378',
+              background: theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, #0a5c5f 0%, #107a80 100%)'
+                : 'linear-gradient(135deg, #107a80 0%, #1aa3a9 100%)',
             },
           }}
         >

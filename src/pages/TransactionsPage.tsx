@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Paper,
   Box,
@@ -12,6 +13,7 @@ import {
   Collapse,
   IconButton,
   Tooltip,
+  Chip,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -19,6 +21,7 @@ import {
   Upload as UploadIcon,
   AddCircleOutline as AddCircleOutlineIcon,
   ExpandMore as ExpandMoreIcon,
+  FilterList as FilterListIcon,
 } from '@mui/icons-material';
 import { TransactionDialog } from '../components/TransactionDialog';
 import { TransactionTable } from '../components/TransactionTable';
@@ -32,7 +35,9 @@ import { calculateCumulativeBudget, calculateElapsedPeriods, calculateInstallmen
 
 export const TransactionsPage: React.FC = () => {
   const theme = useTheme();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
+  const [monthFilter, setMonthFilter] = useState<string | null>(null); // 'YYYY-MM'
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
@@ -41,6 +46,20 @@ export const TransactionsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
   const [budgetsExpanded, setBudgetsExpanded] = useState(false);
+
+  // Initialize search and month filter from URL params (e.g., from Spending page category click)
+  useEffect(() => {
+    const cat = searchParams.get('category');
+    const month = searchParams.get('month');
+    if (cat) setSearchQuery(cat);
+    if (month) setMonthFilter(month);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const clearSpendingFilter = () => {
+    setSearchQuery('');
+    setMonthFilter(null);
+    setSearchParams({});
+  };
 
   // Load transactions and budgets from database
   useEffect(() => {
@@ -105,15 +124,17 @@ export const TransactionsPage: React.FC = () => {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
 
-  // Filter transactions based on search query
+  // Filter transactions based on search query and optional month filter
   const filteredTransactions = transactions.filter(transaction => {
     const searchLower = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = !searchLower || (
       transaction.description.toLowerCase().includes(searchLower) ||
       transaction.category.toLowerCase().includes(searchLower) ||
       transaction.account.toLowerCase().includes(searchLower) ||
       (transaction.notes?.toLowerCase().includes(searchLower))
     );
+    const matchesMonth = !monthFilter || transaction.date.startsWith(monthFilter);
+    return matchesSearch && matchesMonth;
   });
 
   const handleAddTransaction = () => {
@@ -390,6 +411,27 @@ export const TransactionsPage: React.FC = () => {
             Create Budget
           </Button>
         </Paper>
+      )}
+
+      {/* Active spending filter indicator */}
+      {(searchParams.get('category') || searchParams.get('month')) && (
+        <Box sx={{ mb: 2 }}>
+          <Chip
+            icon={<FilterListIcon />}
+            label={[
+              searchParams.get('category') ? `Category: ${searchParams.get('category')}` : null,
+              searchParams.get('month') ? `Month: ${searchParams.get('month')}` : null,
+            ].filter(Boolean).join(' · ')}
+            onDelete={clearSpendingFilter}
+            size="small"
+            sx={{
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(20,149,156,0.15)' : 'rgba(20,149,156,0.1)',
+              color: '#14959c',
+              border: '1px solid rgba(20,149,156,0.3)',
+              '& .MuiChip-deleteIcon': { color: '#14959c' },
+            }}
+          />
+        </Box>
       )}
 
       {/* Search and Action Buttons */}

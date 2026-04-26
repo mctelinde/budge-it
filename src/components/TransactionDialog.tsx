@@ -12,7 +12,8 @@ import {
   useTheme,
   Box,
 } from '@mui/material';
-import { Transaction } from '../data/mockData';
+import { Transaction } from '../types/transaction';
+import { categoryService, accountService } from '../services/database';
 
 interface TransactionDialogProps {
   open: boolean;
@@ -41,6 +42,17 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
     account: '',
     notes: '',
   });
+  const [categories, setCategories] = useState<string[]>([]);
+  const [accounts, setAccounts] = useState<string[]>([]);
+
+  useEffect(() => {
+    categoryService.getAll()
+      .then(data => setCategories(data.map(c => c.name).sort()))
+      .catch(() => setCategories([]));
+    accountService.getAll()
+      .then(data => setAccounts(data.map(a => a.name).sort()))
+      .catch(() => setAccounts([]));
+  }, []);
 
   // Update form data when transaction prop changes or dialog opens
   useEffect(() => {
@@ -90,27 +102,6 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
       onClose();
     }
   };
-
-  const categories = [
-    'Salary',
-    'Freelance',
-    'Investments',
-    'Groceries',
-    'Entertainment',
-    'Transportation',
-    'Utilities',
-    'Dining Out',
-    'Health & Fitness',
-    'Shopping',
-    'Other',
-  ];
-
-  const accounts = [
-    'Chase Checking',
-    'Chase Credit Card',
-    'Amex Credit Card',
-    'Vanguard Account',
-  ];
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>

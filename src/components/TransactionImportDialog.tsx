@@ -15,6 +15,7 @@ import {
   Chip,
   LinearProgress,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   Upload as UploadIcon,
   CheckCircle as CheckCircleIcon,
@@ -39,6 +40,7 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
   onImport,
   existingTransactions,
 }) => {
+  const theme = useTheme();
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<Transaction[]>([]);
@@ -206,7 +208,19 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
+        <Button
+          onClick={handleClose}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.08)'
+                : 'rgba(0, 0, 0, 0.04)',
+            },
+          }}
+        >
+          Cancel
+        </Button>
       </DialogActions>
     </>
   );
@@ -286,7 +300,18 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={importing}>
+        <Button
+          onClick={handleClose}
+          disabled={importing}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.08)'
+                : 'rgba(0, 0, 0, 0.04)',
+            },
+          }}
+        >
           Cancel
         </Button>
         <Button
@@ -294,8 +319,15 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
           variant="contained"
           disabled={importing || preview.length === 0}
           sx={{
-            backgroundColor: '#14959c',
-            '&:hover': { backgroundColor: '#0d7378' },
+            background: theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
+              : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
+            color: '#ffffff',
+            '&:hover': {
+              background: theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, #0a5c5f 0%, #107a80 100%)'
+                : 'linear-gradient(135deg, #107a80 0%, #1aa3a9 100%)',
+            },
           }}
         >
           {importing ? 'Importing...' : `Import ${preview.length} Transactions`}
@@ -323,8 +355,15 @@ export const TransactionImportDialog: React.FC<TransactionImportDialogProps> = (
           onClick={handleClose}
           variant="contained"
           sx={{
-            backgroundColor: '#14959c',
-            '&:hover': { backgroundColor: '#0d7378' },
+            background: theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
+              : 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)',
+            color: '#ffffff',
+            '&:hover': {
+              background: theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, #0a5c5f 0%, #107a80 100%)'
+                : 'linear-gradient(135deg, #107a80 0%, #1aa3a9 100%)',
+            },
           }}
         >
           Done

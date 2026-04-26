@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Paper,
   Typography,
@@ -14,6 +14,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  ToggleButtonGroup,
+  ToggleButton,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -21,68 +25,88 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material';
+import { categoryService } from '../services/database';
 
 interface Category {
   id: string;
   name: string;
+  type: 'income' | 'expense';
 }
 
 export const CategoryManagementPage: React.FC = () => {
   const theme = useTheme();
-  const [categories, setCategories] = useState<Category[]>([
-    { id: '1', name: 'Salary' },
-    { id: '2', name: 'Freelance' },
-    { id: '3', name: 'Investments' },
-    { id: '4', name: 'Groceries' },
-    { id: '5', name: 'Entertainment' },
-    { id: '6', name: 'Transportation' },
-    { id: '7', name: 'Utilities' },
-    { id: '8', name: 'Dining Out' },
-    { id: '9', name: 'Health & Fitness' },
-    { id: '10', name: 'Shopping' },
-    { id: '11', name: 'Other' },
-  ]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryName, setCategoryName] = useState('');
+  const [categoryType, setCategoryType] = useState<'income' | 'expense'>('expense');
+  const [saving, setSaving] = useState(false);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      setError(null);
+      const data = await categoryService.getAll();
+      setCategories(data);
+    } catch (err) {
+      setError('Failed to load categories.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
 
   const handleAdd = () => {
     setEditingCategory(null);
     setCategoryName('');
+    setCategoryType('expense');
     setDialogOpen(true);
   };
 
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
     setCategoryName(category.name);
+    setCategoryType(category.type);
     setDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setCategories(prev => prev.filter(c => c.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await categoryService.delete(id);
+      setCategories(prev => prev.filter(c => c.id !== id));
+    } catch (err) {
+      setError('Failed to delete category.');
+      console.error(err);
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!categoryName.trim()) return;
-
-    if (editingCategory) {
-      setCategories(prev =>
-        prev.map(c => c.id === editingCategory.id
-          ? { ...c, name: categoryName }
-          : c
-        )
-      );
-    } else {
-      const newCategory: Category = {
-        id: Date.now().toString(),
-        name: categoryName,
-      };
-      setCategories(prev => [...prev, newCategory]);
+    setSaving(true);
+    try {
+      if (editingCategory) {
+        await categoryService.update(editingCategory.id, { name: categoryName.trim(), type: categoryType });
+        setCategories(prev =>
+          prev.map(c => c.id === editingCategory.id ? { ...c, name: categoryName.trim(), type: categoryType } : c)
+        );
+      } else {
+        const newCategory = await categoryService.create({ name: categoryName.trim(), type: categoryType });
+        setCategories(prev => [...prev, newCategory]);
+      }
+      setDialogOpen(false);
+      setCategoryName('');
+      setEditingCategory(null);
+    } catch (err) {
+      setError('Failed to save category.');
+      console.error(err);
+    } finally {
+      setSaving(false);
     }
-
-    setDialogOpen(false);
-    setCategoryName('');
-    setEditingCategory(null);
   };
 
   return (
@@ -124,6 +148,12 @@ export const CategoryManagementPage: React.FC = () => {
         </Button>
       </Box>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
       <Paper
         elevation={0}
         sx={{
@@ -133,44 +163,54 @@ export const CategoryManagementPage: React.FC = () => {
           borderRadius: 2,
         }}
       >
-        <List>
-          {categories.map((category) => (
-            <ListItem
-              key={category.id}
-              secondaryAction={
-                <Stack direction="row" spacing={1}>
-                  <IconButton
-                    edge="end"
-                    onClick={() => handleEdit(category)}
-                    sx={{ color: theme.palette.mode === 'dark' ? '#14959c' : '#0d7377' }}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    edge="end"
-                    onClick={() => handleDelete(category.id)}
-                    sx={{ color: 'error.main' }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Stack>
-              }
-              sx={{
-                borderBottom: `1px solid ${theme.palette.divider}`,
-                '&:last-child': {
-                  borderBottom: 'none',
-                },
-              }}
-            >
-              <ListItemText
-                primary={category.name}
-                primaryTypographyProps={{
-                  fontWeight: 500,
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress size={32} sx={{ color: '#14959c' }} />
+          </Box>
+        ) : categories.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ p: 3, textAlign: 'center' }}>
+            No categories yet. Add one to get started.
+          </Typography>
+        ) : (
+          <List>
+            {categories.map((category) => (
+              <ListItem
+                key={category.id}
+                secondaryAction={
+                  <Stack direction="row" spacing={1}>
+                    <IconButton
+                      edge="end"
+                      onClick={() => handleEdit(category)}
+                      sx={{ color: theme.palette.mode === 'dark' ? '#14959c' : '#0d7377' }}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      edge="end"
+                      onClick={() => handleDelete(category.id)}
+                      sx={{ color: 'error.main' }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Stack>
+                }
+                sx={{
+                  borderBottom: `1px solid ${theme.palette.divider}`,
+                  '&:last-child': {
+                    borderBottom: 'none',
+                  },
                 }}
-              />
-            </ListItem>
-          ))}
-        </List>
+              >
+                <ListItemText
+                  primary={category.name}
+                  secondary={category.type}
+                  primaryTypographyProps={{ fontWeight: 500 }}
+                  secondaryTypographyProps={{ sx: { textTransform: 'capitalize' } }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
       </Paper>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -178,21 +218,37 @@ export const CategoryManagementPage: React.FC = () => {
           {editingCategory ? 'Edit Category' : 'New Category'}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Category Name"
-            type="text"
-            fullWidth
-            variant="outlined"
-            value={categoryName}
-            onChange={(e) => setCategoryName(e.target.value)}
-            sx={{ mt: 2 }}
-          />
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              autoFocus
+              label="Category Name"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            />
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Type
+              </Typography>
+              <ToggleButtonGroup
+                value={categoryType}
+                exclusive
+                onChange={(_, val) => val && setCategoryType(val)}
+                size="small"
+              >
+                <ToggleButton value="expense">Expense</ToggleButton>
+                <ToggleButton value="income">Income</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+          </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 2.5, gap: 1 }}>
           <Button
             onClick={() => setDialogOpen(false)}
+            disabled={saving}
             sx={{
               color: theme.palette.text.primary,
               '&:hover': {
@@ -207,6 +263,7 @@ export const CategoryManagementPage: React.FC = () => {
           <Button
             onClick={handleSave}
             variant="contained"
+            disabled={!categoryName.trim() || saving}
             sx={{
               background: theme.palette.mode === 'dark'
                 ? 'linear-gradient(135deg, #0d7377 0%, #14959c 100%)'
@@ -218,7 +275,7 @@ export const CategoryManagementPage: React.FC = () => {
               }
             }}
           >
-            {editingCategory ? 'Save Changes' : 'Add Category'}
+            {saving ? 'Saving...' : editingCategory ? 'Save Changes' : 'Add Category'}
           </Button>
         </DialogActions>
       </Dialog>

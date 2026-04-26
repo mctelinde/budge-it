@@ -15,8 +15,8 @@ import { Budget, Transaction } from '../types/transaction';
 import { BudgetDialog } from '../components/BudgetDialog';
 import { BudgetCard } from '../components/BudgetCard';
 import { TransactionAllocationDialog } from '../components/TransactionAllocationDialog';
-import { budgetService, transactionService, installmentPlanService } from '../services/database';
-import { calculateCumulativeBudget, calculateElapsedPeriods, calculateInstallmentSpent } from '../utils/budgetCalculations';
+import { calculateCumulativeBudget, calculateElapsedPeriods, calculateInstallmentSpent, calculateRecurringChargeTotal } from '../utils/budgetCalculations';
+import { budgetService, transactionService, installmentPlanService, recurringChargeService } from '../services/database';
 
 export const BudgetPage: React.FC = () => {
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -129,7 +129,8 @@ export const BudgetPage: React.FC = () => {
   };
 
   // Calculate net spent for each budget: expenses minus credits, with installment plans
-  // spreading a transaction's cost across multiple rollover periods.
+  // spreading a transaction's cost across multiple rollover periods, and recurring charges
+  // replacing matched transactions with period-based counts.
   const getBudgetSpent = (budget: Budget): number => {
     if (!budget.transactionIds || budget.transactionIds.length === 0) {
       return 0;
@@ -140,8 +141,20 @@ export const BudgetPage: React.FC = () => {
       (budget.installmentPlans || []).map((p) => p.transactionId)
     );
 
+    const recurringCharges = budget.recurringCharges || [];
+
+    const isMatchedByRecurringCharge = (t: Transaction): boolean =>
+      recurringCharges.some(
+        (c) =>
+          c.description.toLowerCase() === t.description.toLowerCase() &&
+          c.amount === t.amount
+      );
+
     const directTransactions = transactions.filter(
-      (t) => budget.transactionIds?.includes(t.id) && !installmentTxnIds.has(t.id)
+      (t) =>
+        budget.transactionIds?.includes(t.id) &&
+        !installmentTxnIds.has(t.id) &&
+        !isMatchedByRecurringCharge(t)
     );
 
     const expenses = directTransactions
@@ -157,7 +170,12 @@ export const BudgetPage: React.FC = () => {
       0
     );
 
-    return expenses - credits + installmentSpent;
+    const recurringTotal = recurringCharges.reduce(
+      (sum, charge) => sum + calculateRecurringChargeTotal(charge, budget.period, budget.rolloverDay),
+      0
+    );
+
+    return expenses - credits + installmentSpent + recurringTotal;
   };
 
   const handleInstallmentSave = async (
@@ -187,6 +205,42 @@ export const BudgetPage: React.FC = () => {
       await refreshBudgets();
     } catch (error) {
       console.error('Failed to remove installment plan:', error);
+    }
+  };
+
+  const handleRecurringChargeSave = async (
+    budgetId: string,
+    description: string,
+    amount: number,
+    startPeriodDate: string,
+    endPeriodDate?: string
+  ) => {
+    try {
+      await recurringChargeService.create({ budgetId, description, amount, startPeriodDate, endPeriodDate });
+      await refreshBudgets();
+    } catch (error) {
+      console.error('Failed to create recurring charge:', error);
+    }
+  };
+
+  const handleRecurringChargeUpdate = async (
+    chargeId: string,
+    updates: { amount?: number; endPeriodDate?: string | null }
+  ) => {
+    try {
+      await recurringChargeService.update(chargeId, updates);
+      await refreshBudgets();
+    } catch (error) {
+      console.error('Failed to update recurring charge:', error);
+    }
+  };
+
+  const handleRecurringChargeRemove = async (chargeId: string) => {
+    try {
+      await recurringChargeService.remove(chargeId);
+      await refreshBudgets();
+    } catch (error) {
+      console.error('Failed to remove recurring charge:', error);
     }
   };
 
@@ -353,6 +407,7 @@ export const BudgetPage: React.FC = () => {
                   allocatedTransactions={allocatedTxns}
                   rolloverDay={budget.rolloverDay}
                   installmentPlans={budget.installmentPlans}
+                  recurringCharges={budget.recurringCharges}
                   onEdit={() => handleEditClick(budget)}
                   onDelete={() => handleDeleteBudget(budget.id)}
                   onManageTransactions={() => handleManageTransactions(budget)}
@@ -400,6 +455,12 @@ export const BudgetPage: React.FC = () => {
           installmentPlans={allocatingBudget.installmentPlans}
           onInstallmentSave={handleInstallmentSave}
           onInstallmentRemove={handleInstallmentRemove}
+          recurringCharges={allocatingBudget.recurringCharges}
+          onRecurringChargeSave={(desc, amount, startPeriodDate, endPeriodDate) =>
+            handleRecurringChargeSave(allocatingBudget.id, desc, amount, startPeriodDate, endPeriodDate)
+          }
+          onRecurringChargeUpdate={handleRecurringChargeUpdate}
+          onRecurringChargeRemove={handleRecurringChargeRemove}
         />
       )}
     </Box>

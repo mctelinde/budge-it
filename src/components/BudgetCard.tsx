@@ -20,8 +20,9 @@ import {
 } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, ReferenceLine, Area } from 'recharts';
-import { Transaction, InstallmentPlan } from '../types/transaction';
+import { Transaction, InstallmentPlan, RecurringCharge } from '../types/transaction';
 import { generateBudgetLifecycleData } from '../utils/budgetGraphData';
+import { calculateNextPeriodInstallments } from '../utils/budgetCalculations';
 
 interface BudgetCardProps {
   title?: string;
@@ -37,6 +38,7 @@ interface BudgetCardProps {
   allocatedTransactions?: Transaction[]; // Transactions allocated to this budget
   rolloverDay?: number;
   installmentPlans?: InstallmentPlan[];
+  recurringCharges?: RecurringCharge[];
   onEdit?: () => void;
   onDelete?: () => void;
   onManageTransactions?: () => void;
@@ -57,6 +59,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
   allocatedTransactions = [],
   rolloverDay,
   installmentPlans = [],
+  recurringCharges = [],
   onEdit,
   onDelete,
   onManageTransactions,
@@ -76,6 +79,19 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
     if (percentageUsed < 90) return '#ff9800';
     return '#ff6f00';
   };
+
+  const nextPeriodInstallments = calculateNextPeriodInstallments(
+    installmentPlans,
+    period,
+    rolloverDay
+  );
+  // Recurring charges that are still active next period contribute their per-period amount
+  const nextPeriodRecurring = recurringCharges.reduce((sum, charge) => {
+    const isEnded = charge.endPeriodDate && new Date(charge.endPeriodDate) <= new Date();
+    return isEnded ? sum : sum + charge.amount;
+  }, 0);
+  // Carry over remaining, add next period's budget credit, subtract upcoming installments and recurring charges
+  const nextStartingBalance = remaining + budgetTotal - nextPeriodInstallments - nextPeriodRecurring;
 
   return (
     <Card
@@ -150,72 +166,104 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
         <Collapse in={expanded}>
           <Box>
-            {/* Budget Stats - Single Row */}
+            {/* Budget Stats */}
             <Box
               sx={{
                 display: 'grid',
                 gridTemplateColumns: {
-                  xs: '1fr 1fr',
-                  sm: startingBalance !== 0 ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)'
+                  xs: 'repeat(2, 1fr)',
+                  sm: 'repeat(3, 1fr)',
+                  md: startingBalance !== 0 ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)',
                 },
-                gap: 3,
+                gap: 1.5,
                 mb: 3,
               }}
             >
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  {elapsedPeriods && elapsedPeriods > 1 ? `Budget (${elapsedPeriods} periods)` : 'Budget'}
-                </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 600, color: '#14959c' }}>
-                  ${totalBudgetAvailable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Typography>
-                {elapsedPeriods && elapsedPeriods > 1 && (
-                  <Typography variant="caption" color="text.secondary">
-                    ${budgetTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per period
-                  </Typography>
-                )}
-              </Box>
+              {/* Shared chip/square style */}
+              {(() => {
+                const chipSx = {
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
+                  borderRadius: 2,
+                  p: 1.5,
+                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+                };
+                return (
+                  <>
+                    <Box sx={chipSx}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        {elapsedPeriods && elapsedPeriods > 1 ? `Budget (${elapsedPeriods} periods)` : 'Budget'}
+                      </Typography>
+                      <Typography variant="h5" sx={{ fontWeight: 600, color: '#14959c' }}>
+                        ${totalBudgetAvailable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Typography>
+                      {elapsedPeriods && elapsedPeriods > 1 && (
+                        <Typography variant="caption" color="text.secondary">
+                          ${budgetTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per period
+                        </Typography>
+                      )}
+                    </Box>
 
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  Spent
-                </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 600, color: '#ff6f00' }}>
-                  ${spent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Typography>
-              </Box>
+                    <Box sx={chipSx}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Spent
+                      </Typography>
+                      <Typography variant="h5" sx={{ fontWeight: 600, color: '#ff6f00' }}>
+                        ${spent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Typography>
+                    </Box>
 
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  Remaining
-                </Typography>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontWeight: 600,
-                    color: remaining >= 0 ? '#14959c' : '#d84315',
-                  }}
-                >
-                  {remaining >= 0 ? '' : '-'}${Math.abs(remaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Typography>
-              </Box>
+                    <Box sx={chipSx}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Remaining
+                      </Typography>
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          fontWeight: 600,
+                          color: remaining >= 0 ? '#14959c' : '#d84315',
+                        }}
+                      >
+                        {remaining >= 0 ? '' : '-'}${Math.abs(remaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Typography>
+                    </Box>
 
-              {startingBalance !== 0 && (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Starting Balance
-                  </Typography>
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontWeight: 600,
-                      color: startingBalance >= 0 ? '#14959c' : '#d84315',
-                    }}
-                  >
-                    {startingBalance >= 0 ? '+' : '-'}${Math.abs(startingBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </Typography>
-                </Box>
-              )}
+                    {startingBalance !== 0 && (
+                      <Box sx={chipSx}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                          Starting Balance
+                        </Typography>
+                        <Typography
+                          variant="h5"
+                          sx={{
+                            fontWeight: 600,
+                            color: startingBalance >= 0 ? '#14959c' : '#d84315',
+                          }}
+                        >
+                          {startingBalance >= 0 ? '+' : '-'}${Math.abs(startingBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    <Box sx={chipSx}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                        Next Starting Balance
+                      </Typography>
+                      <Typography
+                        variant="h5"
+                        sx={{
+                          fontWeight: 600,
+                          color: nextStartingBalance >= 0 ? '#14959c' : '#d84315',
+                        }}
+                      >
+                        {nextStartingBalance >= 0 ? '' : '-'}${Math.abs(nextStartingBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        if period ended today
+                      </Typography>
+                    </Box>
+                  </>
+                );
+              })()}
             </Box>
 
             {/* Progress Bar */}
