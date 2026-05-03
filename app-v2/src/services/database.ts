@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase';
-import type { Budget, Forecast, Transaction, InstallmentPlan, RecurringCharge, Account } from '../types/transaction';
+import { supabase } from '@/lib/supabase';
+import type { Budget, Forecast, Transaction, InstallmentPlan, RecurringCharge, Account } from '@shared/types/transaction';
 
 /**
  * Database service layer for Supabase operations

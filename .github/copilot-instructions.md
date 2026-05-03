@@ -145,6 +145,30 @@ Invoke-RestMethod -Uri "$url/rest/v1/<table>?select=*&limit=5" `
 - `{project}.supabase.co/pg/query` — 404 on this project (pg-meta not exposed)
 - `npx supabase` CLI — not installed; avoid prompting to install during tasks
 
+## app-v2 Migration Notes
+
+The `app-v2/` directory is a Vite + shadcn/Radix UI rewrite of the app (strangler fig pattern). It runs at **http://localhost:5173** (`npm run dev` inside `app-v2/`). Key rules when working on it:
+
+**`@shared` import rules (`verbatimModuleSyntax: true`)**
+
+The v2 TypeScript config has `verbatimModuleSyntax: true`. Any file TypeScript traces via an `@shared` import — including files in `src/utils/` and `src/types/` — must use `import type` for all type-only imports or the build will fail with TS1484.
+
+- ✅ **Safe** `@shared` imports: `@shared/types/*`, `@shared/utils/*`
+- ❌ **Unsafe** `@shared` imports: `@shared/lib/supabase`, `@shared/services/database`, `@shared/contexts/*` (they use `process.env` which is undefined at Vite runtime — causes white screen)
+- When a shared util (e.g. `src/utils/budgetCalculations.ts`) needs fixing, change `import { X }` → `import type { X }` for any type imports. This is safe and non-breaking for the legacy CRA app too.
+
+**Service layer**
+
+All v2 pages must import from `@/services/database` (the v2-native copy), **never** from `@shared/services/database`. The v2 service file uses `@/lib/supabase` (which reads `import.meta.env.VITE_*` instead of `process.env.REACT_APP_*`).
+
+**Env vars**
+
+Vite reads from `app-v2/.env.local`, not the repo-root `.env.local`. Both files exist; the v2 one holds `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+
+**HMR recovery**
+
+If a module-level crash occurs (white screen that hard-refresh doesn't fix): restart the Vite dev server and do `Ctrl+Shift+R` in the browser.
+
 ## Database Schema Notes
 
 - `transactions.budget_id` is nullable (`ON DELETE SET NULL`) — transactions can exist without a budget

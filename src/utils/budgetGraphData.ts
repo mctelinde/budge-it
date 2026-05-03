@@ -1,4 +1,4 @@
-import { Budget, Transaction } from '../types/transaction';
+import type { Budget, Transaction } from '../types/transaction';
 
 export interface BudgetLifecycleDataPoint {
   date: string;

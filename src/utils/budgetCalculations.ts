@@ -1,4 +1,4 @@
-import { Budget, InstallmentPlan, RecurringCharge, Transaction } from '../types/transaction';
+import type { Budget, InstallmentPlan, RecurringCharge, Transaction } from '../types/transaction';
 
 /**
  * Calculate how many budget periods have elapsed based on rollover day
