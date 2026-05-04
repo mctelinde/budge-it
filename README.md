@@ -1,10 +1,10 @@
 # Budge-it
 
-A modern, responsive personal finance management application built with React and Material-UI.
+A modern, responsive personal finance management application built with React and Tailwind CSS.
 
 ![React](https://img.shields.io/badge/React-19.2.0-61DAFB?style=flat&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat&logo=typescript)
-![Material-UI](https://img.shields.io/badge/Material--UI-7.3.4-007FFF?style=flat&logo=mui)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-06B6D4?style=flat&logo=tailwindcss)
 
 ## Features
 
@@ -43,13 +43,15 @@ A modern, responsive personal finance management application built with React an
 
 ## Tech Stack
 
-- React 19.2.0
+- React 19
 - TypeScript
-- Material-UI v7.3.4
-- React Router DOM 7.9.4
+- Vite
+- Tailwind CSS v4
+- shadcn/ui (Radix UI components)
+- React Router DOM 7
 - Supabase (PostgreSQL database & authentication)
 - Recharts (data visualization)
-- Righteous & Inter fonts
+- Geist & Inter fonts
 
 ## Deployment
 
@@ -125,4 +127,4 @@ See `database/README.md` for detailed migration instructions.
 
 Chris Telinde
 
-Built with React, Material-UI, and Supabase
+Built with React, Tailwind CSS, and Supabase
