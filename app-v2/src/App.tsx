@@ -58,7 +58,7 @@ function AppContent() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/auth" replace />} />
-        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/auth" element={<AuthPage isDarkMode={isDarkMode} toggleTheme={toggleTheme} />} />
         <Route path="/app/budget" element={protectedPage(<BudgetPage />)} />
         <Route path="/app/forecasts" element={protectedPage(<ForecastsPage />)} />
         <Route path="/app/spending" element={protectedPage(<SpendingPage />)} />

@@ -244,10 +244,10 @@ export const BudgetPage: React.FC = () => {
       <Button
         onClick={() => { setEditingBudget(undefined); setDialogOpen(true); }}
         aria-label="Add budget"
-        className="fixed bottom-6 right-6 h-12 px-6 text-white shadow-lg gap-2 text-base"
+        className="fixed bottom-6 right-6 h-10 px-4 text-white shadow-lg gap-1.5"
         style={{ background: 'linear-gradient(135deg, #14959c 0%, #1fb5bc 100%)' }}
       >
-        <Plus className="size-5" />
+        <Plus className="size-4" />
         Add Budget
       </Button>
 

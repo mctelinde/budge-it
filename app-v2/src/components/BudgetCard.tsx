@@ -50,6 +50,37 @@ interface BudgetCardProps {
   onTransactionCountClick?: () => void;
 }
 
+interface CustomChartTooltipProps {
+  active?: boolean;
+  payload?: { name: string; value: number; color: string; dataKey: string }[];
+  label?: string;
+}
+
+const CustomChartTooltip: React.FC<CustomChartTooltipProps> = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  // Deduplicate by dataKey (Area + Line both use dataKey="balance") and skip zero values
+  const seen = new Set<string>();
+  const entries = payload.filter(e => {
+    if (e.value === 0 || seen.has(e.dataKey)) return false;
+    seen.add(e.dataKey);
+    return true;
+  });
+  if (!entries.length) return null;
+  return (
+    <div
+      className="rounded-lg border border-[#14959c] p-2 text-xs shadow-lg"
+      style={{ backgroundColor: 'var(--background)' }}
+    >
+      <p className="font-medium mb-1">{label}</p>
+      {entries.map((entry) => (
+        <p key={entry.name} style={{ color: entry.color }}>
+          {entry.name.charAt(0).toUpperCase() + entry.name.slice(1)}: ${entry.value.toFixed(2)}
+        </p>
+      ))}
+    </div>
+  );
+};
+
 export const BudgetCard: React.FC<BudgetCardProps> = ({
   title = 'Monthly Budget Overview',
   period = 'monthly',
@@ -251,10 +282,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                       <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                       <XAxis dataKey="displayDate" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid #14959c', borderRadius: 8 }}
-                        formatter={(value) => typeof value === 'number' ? `$${value.toFixed(2)}` : ''}
-                      />
+                      <Tooltip content={<CustomChartTooltip />} />
                       <Legend wrapperStyle={{ fontSize: '12px' }} iconType="circle" />
                       <ReferenceLine y={0} stroke="rgba(128,128,128,0.3)" strokeDasharray="3 3" />
                       <Bar dataKey="credit" fill="#14959c" name="Budget Added" radius={[4, 4, 0, 0]} />

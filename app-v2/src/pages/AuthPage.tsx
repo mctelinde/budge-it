@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Sun, Moon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 
-export const AuthPage: React.FC = () => {
+interface AuthPageProps {
+  isDarkMode: boolean;
+  toggleTheme: () => void;
+}
+
+export const AuthPage: React.FC<AuthPageProps> = ({ isDarkMode, toggleTheme }) => {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
@@ -49,16 +55,22 @@ export const AuthPage: React.FC = () => {
     }
   };
 
-  const isDark = document.documentElement.classList.contains('dark');
-  const bgGradient = isDark
+  const bgGradient = isDarkMode
     ? 'linear-gradient(135deg, #0a1929 0%, #1a2332 100%)'
     : 'linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%)';
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center p-4 relative"
       style={{ background: bgGradient }}
     >
+      <button
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 p-2 rounded-full text-[#14959c] hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+        aria-label="Toggle theme"
+      >
+        {isDarkMode ? <Sun className="size-5" /> : <Moon className="size-5" />}
+      </button>
       <Card className="relative w-full max-w-md shadow-2xl">
         <CardContent className="p-8">
           <h1

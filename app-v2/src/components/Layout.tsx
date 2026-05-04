@@ -222,7 +222,10 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
 
 export const Layout: React.FC<LayoutProps> = ({ children, isDarkMode, toggleTheme }) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  const [desktopExpanded, setDesktopExpanded] = React.useState(true);
+  const [desktopExpanded, setDesktopExpanded] = React.useState(() => {
+    const saved = localStorage.getItem('sidebarExpanded');
+    return saved === null ? true : saved === 'true';
+  });
   const location = useLocation();
 
   const currentPage =
@@ -241,7 +244,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isDarkMode, toggleThem
           <SidebarContent
             expanded={desktopExpanded}
             isDarkMode={isDarkMode}
-            onToggleExpanded={() => setDesktopExpanded((v) => !v)}
+            onToggleExpanded={() => setDesktopExpanded((v) => { localStorage.setItem('sidebarExpanded', String(!v)); return !v; })}
           />
           {!desktopExpanded && (
             <button
