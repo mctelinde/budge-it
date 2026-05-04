@@ -161,10 +161,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             onClick={onToggleExpanded}
             className="text-white hover:bg-white/10"
           >
-            <Wallet
-              className="text-white drop-shadow-md"
-              style={{ width: '2rem', height: '2rem' }}
-            />
+            <ChevronRight className="size-5" />
           </Button>
         )}
       </div>
@@ -246,14 +243,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, isDarkMode, toggleThem
             isDarkMode={isDarkMode}
             onToggleExpanded={() => setDesktopExpanded((v) => { localStorage.setItem('sidebarExpanded', String(!v)); return !v; })}
           />
-          {!desktopExpanded && (
-            <button
-              onClick={() => setDesktopExpanded(true)}
-              className="absolute bottom-[88px] left-1/2 -translate-x-1/2 text-white/60 hover:text-white transition-colors"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-          )}
         </div>
       </aside>
 

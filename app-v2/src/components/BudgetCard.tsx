@@ -256,7 +256,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
               <div className="mb-4">
                 <p className="text-xs text-muted-foreground mb-2">Budget Lifecycle</p>
                 <div className="rounded-lg bg-muted/30 p-2">
-                  <ResponsiveContainer width="100%" height={250}>
+                  <ResponsiveContainer width="100%" height={250} debounce={0}>
                     <ComposedChart
                       data={generateBudgetLifecycleData({
                         id: '',
@@ -287,8 +287,8 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
                       <ReferenceLine y={0} stroke="rgba(128,128,128,0.3)" strokeDasharray="3 3" />
                       <Bar dataKey="credit" fill="#14959c" name="Budget Added" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="debit" fill="#f97316" name="Spent" radius={[4, 4, 0, 0]} />
-                      <Area type="monotone" dataKey="balance" fill="url(#splitColor)" stroke="none" legendType="none" />
-                      <Line type="monotone" dataKey="balance" stroke="#0d7377" strokeWidth={2} name="Balance" dot={{ r: 3 }} />
+                      <Area type="monotone" dataKey="balance" fill="url(#splitColor)" stroke="none" legendType="none" isAnimationActive={false} />
+                      <Line type="monotone" dataKey="balance" stroke="#0d7377" strokeWidth={2} name="Balance" dot={{ r: 3 }} isAnimationActive={false} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>

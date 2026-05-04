@@ -80,6 +80,8 @@ function netAmount(t: Transaction) {
   return t.type === 'expense' ? t.amount : -t.amount;
 }
 
+const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 // ── AccountCard ─────────────────────────────────────────────────────────────
 
 interface AccountCardProps {
@@ -124,13 +126,13 @@ const AccountCard: React.FC<AccountCardProps> = ({ account, monthTransactions, o
         <div className="rounded-lg border p-2 text-center">
           <p className="text-xs text-muted-foreground mb-0.5">{isCredit ? 'Balance Owed' : 'Balance'}</p>
           <p className={`text-sm font-semibold ${isCredit && account.currentBalance > 0 ? 'text-amber-500' : ''}`}>
-            ${account.currentBalance.toFixed(2)}
+            ${fmt(account.currentBalance)}
           </p>
         </div>
         <div className="rounded-lg border p-2 text-center">
           <p className="text-xs text-muted-foreground mb-0.5">This Month</p>
           <p className={`text-sm font-semibold ${monthNet > 0 ? 'text-red-500' : monthNet < 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
-            {monthNet > 0 ? '+' : ''}{monthNet.toFixed(2)}
+            {monthNet > 0 ? '+' : ''}${fmt(monthNet)}
           </p>
         </div>
       </div>
@@ -376,6 +378,7 @@ export const SpendingPage: React.FC = () => {
   );
   const netFlow = totalIn - totalOut;
 
+
   const categoryBreakdown = useMemo(() => {
     const map: Record<string, number> = {};
     monthTxns.forEach((t) => { map[t.category] = (map[t.category] ?? 0) + netAmount(t); });
@@ -450,9 +453,9 @@ export const SpendingPage: React.FC = () => {
       {/* Summary chips */}
       <div className="flex flex-wrap gap-3 mb-6">
         {[
-          { label: 'Total In', value: `+$${totalIn.toFixed(2)}`, cls: 'text-green-600 dark:text-green-400' },
-          { label: 'Total Out', value: `-$${totalOut.toFixed(2)}`, cls: 'text-red-500' },
-          { label: 'Net Cash Flow', value: `${netFlow >= 0 ? '+' : ''}$${netFlow.toFixed(2)}`, cls: netFlow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500' },
+          { label: 'Total In', value: `+$${fmt(totalIn)}`, cls: 'text-green-600 dark:text-green-400' },
+          { label: 'Total Out', value: `-$${fmt(totalOut)}`, cls: 'text-red-500' },
+          { label: 'Net Cash Flow', value: `${netFlow >= 0 ? '+' : ''}$${fmt(netFlow)}`, cls: netFlow >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500' },
         ].map(({ label, value, cls }) => (
           <div key={label} className="rounded-xl border bg-card px-4 py-2 min-w-[130px]">
             <p className="text-xs text-muted-foreground">{label}</p>
@@ -515,7 +518,7 @@ export const SpendingPage: React.FC = () => {
                     <div className="flex justify-between mb-1">
                       <span className="text-sm truncate max-w-[55%]">{category}</span>
                       <span className={`text-sm font-semibold ${net > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                        {net > 0 ? '+' : ''}${net.toFixed(2)}
+                        {net > 0 ? '+' : ''}${fmt(net)}
                       </span>
                     </div>
                     <div className="h-1.5 rounded-full bg-muted overflow-hidden">
@@ -548,7 +551,7 @@ export const SpendingPage: React.FC = () => {
                 />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} width={60} />
                 <RechartsTooltip
-                  formatter={(val) => [`$${Number(val).toFixed(2)}`, 'Cumulative Net']}
+                  formatter={(val) => [`$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Cumulative Net']}
                   labelFormatter={(label) => `Day ${label}`}
                 />
                 <Line
