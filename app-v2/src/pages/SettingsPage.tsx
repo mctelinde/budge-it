@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { ConnectedAccounts } from '@/components/ConnectedAccounts';
 
 const settingsItems = [
   {
@@ -80,6 +81,13 @@ export const SettingsPage: React.FC = () => {
               </React.Fragment>
             );
           })}
+        </CardContent>
+      </Card>
+
+      {/* Connected Accounts (Plaid) */}
+      <Card>
+        <CardContent className="p-4">
+          <ConnectedAccounts />
         </CardContent>
       </Card>
 
