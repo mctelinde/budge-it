@@ -129,10 +129,6 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
               to="/app/budget"
               className="flex items-center gap-2.5 no-underline hover:opacity-80 transition-opacity"
             >
-              <Wallet
-                className="text-white drop-shadow-md"
-                style={{ width: '2rem', height: '2rem' }}
-              />
               <span
                 className="text-white text-[1.75rem] font-normal tracking-wide whitespace-nowrap"
                 style={{
