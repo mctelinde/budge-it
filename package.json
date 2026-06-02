@@ -8,7 +8,7 @@
     "restart": "pm2 restart budge-it",
     "status": "pm2 status",
     "logs": "pm2 logs budge-it",
-    "build": "npm run build --prefix app-v2",
+    "build": "npm run build --prefix app",
     "deploy": "npm run build && pm2 start ecosystem.config.js || pm2 restart budge-it"
   }
 }

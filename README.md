@@ -38,17 +38,17 @@ A modern, responsive personal finance management application built with React, T
 ### Development
 
 1. Clone the repository
-2. Install dependencies in both root and app-v2:
+2. Install dependencies in both root and app:
    ```bash
    npm install
-   cd app-v2
+   cd app
    npm install
    cd ..
    ```
 3. Copy `.env.local` (or create it with Supabase credentials)
 4. Start the development server:
    ```bash
-   cd app-v2
+   cd app
    npm run dev
    ```
 5. Open <https://localhost:5173>
@@ -61,7 +61,7 @@ Build the app for production:
 npm run build
 ```
 
-This builds app-v2 and outputs to `app-v2/dist/`.
+This builds app and outputs to `app/dist/`.
 
 ## Tech Stack
 
@@ -132,7 +132,7 @@ For cloud hosting, the app works with:
 
 ### Environment Variables
 
-Required environment variables (set in `.env.local` for development, `app-v2/.env.local` for Vite):
+Required environment variables (set in `.env.local` for development, `app/.env.local` for Vite):
 
 ```
 VITE_SUPABASE_URL=your_supabase_project_url
@@ -151,7 +151,7 @@ See `database/README.md` for detailed migration instructions.
 
 ```
 budge-it/
-├── app-v2/                  # Main Vite + React app (the active app)
+├── app/                    # Main Vite + React app (the active app)
 │   ├── src/
 │   ├── vite.config.ts
 │   ├── tsconfig.json

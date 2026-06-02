@@ -78,4 +78,4 @@ The Supabase anon key is safe to treat as semi-public â€” it cannot bypass RLS â
 
 - **Supabase** manages auth, database, and Edge Function hosting. Review their [security practices](https://supabase.com/security).
 - **Plaid** handles bank connectivity. Review their [security overview](https://plaid.com/documents/plaid-security-overview.pdf).
-- Frontend dependencies are managed in `app-v2/package.json`. Run `npm audit` inside `app-v2/` to check for known vulnerabilities.
+- Frontend dependencies are managed in `app/package.json`. Run `npm audit` inside `app/` to check for known vulnerabilities.
