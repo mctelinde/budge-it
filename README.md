@@ -1,10 +1,11 @@
 # Budge-it
 
-A modern, responsive personal finance management application built with React and Tailwind CSS.
+A modern, responsive personal finance management application built with React, TypeScript, and Vite.
 
 ![React](https://img.shields.io/badge/React-19.2.0-61DAFB?style=flat&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat&logo=typescript)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-06B6D4?style=flat&logo=tailwindcss)
+![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?style=flat&logo=vite)
 
 ## Features
 
@@ -31,71 +32,94 @@ A modern, responsive personal finance management application built with React an
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
-- npm or yarn
+- Node.js (v18 or higher)
+- npm
 
-### Installation
+### Development
 
 1. Clone the repository
-2. Install dependencies
-3. Start the development server
-4. Open <http://localhost:3000>
+2. Install dependencies in both root and app-v2:
+   ```bash
+   npm install
+   cd app-v2
+   npm install
+   cd ..
+   ```
+3. Copy `.env.local` (or create it with Supabase credentials)
+4. Start the development server:
+   ```bash
+   cd app-v2
+   npm run dev
+   ```
+5. Open <https://localhost:5173>
+
+### Production Build
+
+Build the app for production:
+
+```bash
+npm run build
+```
+
+This builds app-v2 and outputs to `app-v2/dist/`.
 
 ## Tech Stack
 
 - React 19
 - TypeScript
-- Vite
+- Vite (fast build tool)
 - Tailwind CSS v4
 - shadcn/ui (Radix UI components)
 - React Router DOM 7
 - Supabase (PostgreSQL database & authentication)
 - Recharts (data visualization)
 - Geist & Inter fonts
+- PM2 (process management)
 
 ## Deployment
 
 ### Local Production Deployment
 
-The app can be built and served locally for personal use:
+The app can be built and served locally for personal use.
 
-#### 1. Build the Production App
-
-```bash
-npm run build
-```
-
-#### 2. Install Serve (if not already installed)
+#### 1. Build and Deploy
 
 ```bash
-npm install -g serve
+npm run deploy
 ```
 
-#### 3. Serve the App
+This runs the production build and starts the PM2 daemon. The app will be available at **https://localhost:3000**
+
+#### 2. Management Commands
 
 ```bash
-serve -s build -l 3000
+npm run serve      # Start the server (if stopped)
+npm run stop       # Stop the server
+npm run restart    # Restart without rebuilding
+npm run status     # Show PM2 process status
+npm run logs       # View server logs
 ```
 
-The app will be available at `http://localhost:3000`
+#### 3. Auto-Start on Windows Boot
 
-#### 4. Auto-Start on Windows Boot
+To make the app auto-start on Windows login:
 
-For automatic startup, you can:
+```bash
+pm2 startup
+pm2 save
+```
 
-**Option A: Use the provided batch file**
-- Run `start-budge-it.bat` to start the server in a minimized window
-- Copy this file to your Windows Startup folder (`Win+R` → `shell:startup`) for auto-start on boot
+Then follow PM2's instructions to install the startup script.
 
-**Option B: Use Windows Task Scheduler**
-- Create a new task to run `start-budge-it.bat` at system startup
-- Set it to run with highest privileges
+#### 4. SSL Certificates
+
+The server runs on HTTPS using self-signed certificates at `certs/cert.pem` and `certs/key.pem`. These are auto-generated in the codebase. In your browser, you'll see a certificate warning—this is expected and safe to ignore for local development.
 
 #### 5. Remote Access with Tailscale
 
 Once running locally, you can access the app from anywhere using [Tailscale](https://tailscale.com/):
 - Install Tailscale on your server and devices
-- Access the app via your Tailscale IP: `http://[tailscale-ip]:3000`
+- Access the app via your Tailscale IP: `https://[tailscale-ip]:3000`
 - Optional: Set up a MagicDNS name for easier access
 
 ### Cloud Deployment Options
@@ -108,11 +132,11 @@ For cloud hosting, the app works with:
 
 ### Environment Variables
 
-Required environment variables (set in `.env.local` for development or in your deployment platform):
+Required environment variables (set in `.env.local` for development, `app-v2/.env.local` for Vite):
 
 ```
-REACT_APP_SUPABASE_URL=your_supabase_project_url
-REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ### Database Setup
@@ -123,8 +147,28 @@ Run the SQL migrations in the `database/migrations/` folder in your Supabase SQL
 
 See `database/README.md` for detailed migration instructions.
 
+## Project Structure
+
+```
+budge-it/
+├── app-v2/                  # Main Vite + React app (the active app)
+│   ├── src/
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   └── dist/               # Production build output
+├── src/                    # Shared utilities and types
+│   ├── types/             # Shared TypeScript types
+│   ├── utils/             # Shared utility functions
+│   └── services/          # Shared database service layer
+├── certs/                 # SSL certificates for local HTTPS
+├── database/              # Database migrations
+├── ecosystem.config.js    # PM2 configuration
+├── start-serve.sh        # Shell script to start the production server
+└── package.json          # Root-level build and deployment scripts
+```
+
 ## Author
 
 Chris Telinde
 
-Built with React, Tailwind CSS, and Supabase
+Built with React, TypeScript, Vite, Tailwind CSS, and Supabase

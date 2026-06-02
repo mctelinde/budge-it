@@ -1,3 +1,7 @@
 @echo off
-cd /d "C:\Users\mctel\source\repos\budge-it"
-start /min cmd /c "serve -s build -l 3000"
+REM Start budge-it app using PM2 (requires global npm install of pm2)
+REM This script should be run from the project root directory
+
+cd /d "%~dp0"
+pm2 start ecosystem.config.js
+
